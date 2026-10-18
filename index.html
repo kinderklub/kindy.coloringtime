@@ -1,0 +1,2623 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Coloring Time — Jom Mewarna!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Library Penjana Dokumen PDF Asli -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --hot-pink: #FF1493;
+      --bright-pink: #FF4081;
+      --sunshine-yellow: #FFD200;
+      --tangerine-orange: #FF7A00;
+      --lime-green: #38E038;
+      --emerald-green: #00C853;
+      --turquoise: #00D2D3;
+      --sky-blue: #0984E3;
+      --vivid-purple: #9C27B0;
+      --rainbow-gradient: linear-gradient(135deg, #FF4081, #FF7A00, #FFD200, #38E038, #00D2D3, #0984E3, #9C27B0);
+      --font-bubble: 'Fredoka One', 'Quicksand', cursive, sans-serif;
+      --font-body: 'Quicksand', sans-serif;
+      --current-hue-color: #FF1493;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: #FFF9E6;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(255, 64, 129, 0.12) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(0, 210, 211, 0.15) 0%, transparent 25%),
+        radial-gradient(circle at 80% 20%, rgba(255, 210, 0, 0.15) 0%, transparent 20%),
+        radial-gradient(#FFE885 1.5px, transparent 1.5px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+      color: #2D3436;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    .font-bubble { font-family: var(--font-bubble); }
+
+    .btn-chunky {
+      font-family: var(--font-bubble);
+      border-radius: 50px;
+      border: 3px solid #FFF;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 6px 0px rgba(0,0,0,0.15);
+      text-decoration: none;
+      outline: none;
+    }
+    .btn-chunky:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0px rgba(0,0,0,0.18);
+    }
+    .btn-chunky:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0px rgba(0,0,0,0.15);
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      flex: 1;
+      flex-direction: column;
+      animation: popIn 0.3s ease-out forwards;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.97); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .studio-workspace {
+      position: relative;
+      background: #E5ECF4;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .canvas-container {
+      position: relative;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.2);
+      border-radius: 18px;
+      background: #FFFFFF;
+      overflow: hidden;
+      transform-origin: center center;
+      transition: transform 0.05s linear;
+      will-change: transform;
+    }
+
+    #drawingCanvas {
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .zoom-hud-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border: 2px solid #FCD34D;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-bubble);
+      color: #1F2937;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .zoom-hud-btn:hover {
+      transform: scale(1.08);
+      background: #FFFFFF;
+      border-color: #F59E0B;
+    }
+    .zoom-hud-btn:active {
+      transform: scale(0.92);
+    }
+    .zoom-hud-btn.active {
+      background: #EC4899;
+      color: #FFFFFF;
+      border-color: #DB2777;
+    }
+    .zoom-hud-btn.active svg {
+      stroke: #FFFFFF;
+      fill: #FFFFFF;
+    }
+
+    .svg-icon {
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+
+    /* Chunky Sliders */
+    .color-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      outline: none;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      touch-action: pan-x;
+      cursor: pointer;
+    }
+
+    .color-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 3.5px solid #FF1493;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+      cursor: grab;
+      transition: transform 0.1s ease;
+    }
+    .color-slider::-webkit-slider-thumb:active {
+      transform: scale(1.25);
+      cursor: grabbing;
+    }
+
+    .color-slider::-moz-range-thumb {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 3.5px solid #FF1493;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+      cursor: grab;
+    }
+
+    .rainbow-track {
+      background: linear-gradient(to right, 
+        #FF0000 0%, #FF7A00 17%, #FFD200 33%, 
+        #00C853 50%, #00D2D3 67%, #0984E3 83%, 
+        #9C27B0 92%, #FF0000 100%);
+    }
+
+    .lightness-track {
+      background: linear-gradient(to right, #111111 0%, var(--current-hue-color, #FF1493) 50%, #FFFFFF 100%);
+    }
+
+    /* Mobile Responsive Tools Drawer */
+    @media (max-width: 767px) {
+      #studioSidebar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        max-height: 82vh;
+        border-top-left-radius: 28px;
+        border-top-right-radius: 28px;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+        transform: translateY(105%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+      }
+      #studioSidebar.drawer-open {
+        transform: translateY(0%);
+      }
+    }
+
+    /* In-Page Native Printing System */
+    #printArea {
+      display: none;
+    }
+
+    @media print {
+      body {
+        background: #FFFFFF !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      header, footer, .screen, .no-print, #confirmResetModal, #printModal, #saveSuccessModal, #toast {
+        display: none !important;
+      }
+      #printArea {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100vw !important;
+        min-height: 100vh !important;
+        padding: 1.5cm !important;
+        background: #FFFFFF !important;
+      }
+      #printArea img {
+        max-width: 90% !important;
+        max-height: 75vh !important;
+        object-fit: contain !important;
+        display: block !important;
+        margin: 0 auto !important;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 1cm;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <!-- Header -->
+  <header class="w-full bg-white px-4 md:px-8 py-2.5 shadow-md flex justify-between items-center sticky top-0 z-50 border-b-4 border-yellow-400 no-print">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="App.goHome()">
+      <div class="w-10 h-10 md:w-11 md:h-11 rounded-2xl flex items-center justify-center shadow-lg" style="background: var(--rainbow-gradient)">
+        <svg viewBox="0 0 32 32" class="w-6 h-6 svg-icon" fill="none">
+          <path d="M16 4C9.37 4 4 9.37 4 16c0 4.2 2.16 7.9 5.48 10.05 1.14.74 2.64.08 2.87-1.25.17-1 .85-2.8 2.65-2.8h1c4.42 0 8-3.58 8-8 0-5.52-3.58-10-8-10z" fill="#FFF4D6" stroke="#422006" stroke-width="2"/>
+          <circle cx="10" cy="12" r="2" fill="#FF1493"/>
+          <circle cx="16" cy="9" r="2" fill="#00D2D3"/>
+          <circle cx="21" cy="14" r="2" fill="#FFD200"/>
+          <circle cx="18" cy="19" r="2" fill="#38E038"/>
+          <path d="M22 22l6 6M20 20l3 3" stroke="#FFF" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="font-bubble text-2xl md:text-3xl tracking-tight" style="background: linear-gradient(45deg, #FF1493, #FF7A00, #9C27B0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          Coloring Time
+        </h1>
+        <p class="text-[10px] md:text-xs font-bold text-gray-400 tracking-wider hidden sm:block">PRESCHOOL ART STUDIO</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 md:gap-3">
+      <!-- Language Switcher: BM | English -->
+      <div class="inline-flex bg-amber-100 p-1 rounded-full border-2 border-amber-300">
+        <button id="langBM" onclick="App.setLanguage('ms')" class="px-3 py-1 text-xs md:text-sm font-bubble rounded-full transition-all bg-pink-500 text-white shadow">BM</button>
+        <button id="langEN" onclick="App.setLanguage('en')" class="px-3 py-1 text-xs md:text-sm font-bubble rounded-full transition-all text-amber-900">English</button>
+      </div>
+
+      <!-- My Artworks Button -->
+      <button onclick="App.openMyArtworks()" class="btn-chunky px-3 py-1.5 bg-emerald-500 text-white text-xs md:text-sm" title="Karya Saya / My Artworks">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <span class="hidden sm:inline" data-i18n="myArtBtn">Karya Saya</span>
+      </button>
+
+      <!-- Home Button -->
+      <button onclick="App.goHome()" class="w-10 h-10 rounded-full bg-yellow-400 text-amber-950 flex items-center justify-center font-bubble shadow-md hover:scale-105 active:scale-95 transition-transform" title="Laman Utama / Home">
+        <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="currentColor">
+          <path d="M12 3L2 12h3v8a1 1 0 001 1h4v-5a2 2 0 014 0v5h4a1 1 0 001-1v-8h3L12 3z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Screen 1: Front Page -->
+  <section id="screenHome" class="screen active flex-1 items-center justify-center p-4 md:p-8 relative">
+    <div class="max-w-4xl w-full text-center flex flex-col items-center">
+      
+      <div class="inline-flex items-center gap-2 bg-white text-pink-500 font-bubble text-sm md:text-base px-6 py-2 rounded-full border-2 border-pink-200 shadow-md mb-4">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 fill-amber-400"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9"/></svg>
+        <span id="homeBadge">Jom Cipta Karya Ajaib Kamu!</span>
+        <svg viewBox="0 0 24 24" class="w-4 h-4 fill-amber-400"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9"/></svg>
+      </div>
+      
+      <h2 id="homeTitle" class="font-bubble text-4xl md:text-7xl leading-tight mb-4" style="background: linear-gradient(135deg, #FF1493 0%, #FF7A00 40%, #9C27B0 80%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Jom Mewarna!
+      </h2>
+      
+      <p id="homeSubtitle" class="text-gray-600 font-bold text-lg md:text-2xl max-w-xl mb-8">
+        Pilih gambar comel kegemaran kamu, pilih warna ceria dan warnakan dengan mudah!
+      </p>
+
+      <div class="w-48 h-48 md:w-64 md:h-64 mb-8 bg-white rounded-3xl p-4 shadow-xl border-4 border-yellow-300 flex items-center justify-center transform hover:rotate-2 transition-transform">
+        <svg viewBox="0 0 200 200" class="w-full h-full">
+          <circle cx="100" cy="100" r="90" fill="#FFF4D6"/>
+          <path d="M100 25 C145 25, 180 60, 180 105 C180 145, 145 175, 120 175 C108 175, 100 165, 100 152 C100 142, 108 132, 108 122 C108 110, 96 100, 84 100 L70 100 C40 100, 20 75, 20 50 C20 35, 55 25, 100 25 Z" fill="#FFE082" stroke="#422006" stroke-width="6"/>
+          <circle cx="65" cy="55" r="14" fill="#FF1493"/>
+          <circle cx="105" cy="45" r="14" fill="#00D2D3"/>
+          <circle cx="145" cy="65" r="14" fill="#FF7A00"/>
+          <circle cx="155" cy="110" r="14" fill="#38E038"/>
+          <circle cx="130" cy="145" r="14" fill="#9C27B0"/>
+          <g transform="rotate(40 100 100)">
+            <rect x="92" y="10" width="16" height="110" rx="6" fill="#8D6E63" stroke="#3E2723" stroke-width="4"/>
+            <rect x="90" y="120" width="20" height="25" rx="3" fill="#B0BEC5" stroke="#37474F" stroke-width="3"/>
+            <path d="M90 145 C90 175, 110 175, 110 145 Z" fill="#FF1493" stroke="#880E4F" stroke-width="3"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <button onclick="App.openThemes()" class="btn-chunky text-2xl md:text-3xl px-10 py-5 bg-gradient-to-r from-pink-500 via-orange-500 to-amber-500 text-white border-4 border-white shadow-2xl">
+          <svg viewBox="0 0 24 24" class="w-8 h-8 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/>
+            <path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/>
+            <path d="M9 12H4s.55-3.03 2-4.5c1.2-1.2 3-1.5 3-1.5"/>
+            <path d="M15 9V4s3.03.55 4.5 2c1.2 1.2 1.5 3 1.5 3"/>
+          </svg>
+          <span id="btnStartText">Jom Mewarna</span>
+        </button>
+
+        <button onclick="App.openMyArtworks()" class="btn-chunky text-lg md:text-xl px-7 py-4 bg-emerald-500 text-white border-4 border-white shadow-xl">
+          <svg viewBox="0 0 24 24" class="w-6 h-6 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span data-i18n="myArtBtn">Karya Saya</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 w-full max-w-3xl">
+        <div class="bg-white/80 p-3 rounded-2xl border-2 border-yellow-200 text-center">
+          <div class="w-8 h-8 rounded-full bg-pink-500 text-white font-bubble mx-auto mb-1 flex items-center justify-center">1</div>
+          <div class="text-xs font-bold text-gray-700" data-i18n="step1">Pilih Tema</div>
+        </div>
+        <div class="bg-white/80 p-3 rounded-2xl border-2 border-yellow-200 text-center">
+          <div class="w-8 h-8 rounded-full bg-orange-500 text-white font-bubble mx-auto mb-1 flex items-center justify-center">2</div>
+          <div class="text-xs font-bold text-gray-700" data-i18n="step2">Pilih Gambar</div>
+        </div>
+        <div class="bg-white/80 p-3 rounded-2xl border-2 border-yellow-200 text-center">
+          <div class="w-8 h-8 rounded-full bg-emerald-500 text-white font-bubble mx-auto mb-1 flex items-center justify-center">3</div>
+          <div class="text-xs font-bold text-gray-700" data-i18n="step3">Sentuh & Warnakan</div>
+        </div>
+        <div class="bg-white/80 p-3 rounded-2xl border-2 border-yellow-200 text-center">
+          <div class="w-8 h-8 rounded-full bg-purple-500 text-white font-bubble mx-auto mb-1 flex items-center justify-center">4</div>
+          <div class="text-xs font-bold text-gray-700" data-i18n="step4">Simpan & Cetak!</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 2: Theme Selection -->
+  <section id="screenThemes" class="screen flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+    <div class="text-center mb-6">
+      <h2 id="themesTitle" class="font-bubble text-3xl md:text-5xl text-gray-800 mb-2">Pilih Tema</h2>
+      <p id="themesSubtitle" class="text-gray-600 font-bold text-base md:text-lg">Nak warnakan gambar apa hari ini?</p>
+    </div>
+
+    <!-- Theme Search -->
+    <div class="max-w-md mx-auto mb-6 px-2">
+      <div class="relative">
+        <input type="text" id="themeSearchInput" oninput="App.filterThemes(this.value)" placeholder="Cari tema..." 
+               class="w-full pl-5 pr-12 py-3 rounded-full border-3 border-amber-300 font-bold bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-4 focus:ring-pink-300">
+        <span class="absolute right-4 top-3.5 text-gray-400">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 20 Themes Grid -->
+    <div id="themesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <!-- Injected by JavaScript -->
+    </div>
+  </section>
+
+  <!-- Screen 3: Drawing Gallery -->
+  <section id="screenGallery" class="screen flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <button onclick="App.openThemes()" class="btn-chunky px-4 py-2 bg-white text-gray-700 border-gray-300 text-sm md:text-base">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        <span data-i18n="backThemes">Kembali ke Tema</span>
+      </button>
+
+      <div class="text-center flex-1">
+        <h2 id="galleryThemeTitle" class="font-bubble text-2xl md:text-4xl text-gray-800">Tema</h2>
+        <p id="galleryThemeCount" class="text-xs md:text-sm font-bold text-pink-600">10 Gambar Tersedia</p>
+      </div>
+
+      <label class="btn-chunky px-4 py-2 bg-purple-600 text-white text-xs md:text-sm cursor-pointer shadow">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+          <line x1="12" y1="11" x2="12" y2="17"/>
+          <polyline points="9 14 12 11 15 14"/>
+        </svg>
+        <span data-i18n="uploadOwn">Muat Naik Gambar</span>
+        <input type="file" id="customImageInput" accept="image/png, image/jpeg, image/svg+xml" class="hidden" onchange="App.handleCustomUpload(event)">
+      </label>
+    </div>
+
+    <!-- Drawings List Grid -->
+    <div id="drawingsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <!-- Injected by JavaScript -->
+    </div>
+  </section>
+
+  <!-- Screen 4: My Artworks (Karya Saya) Gallery -->
+  <section id="screenMyArt" class="screen flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <button onclick="App.goHome()" class="btn-chunky px-4 py-2 bg-white text-gray-700 border-gray-300 text-sm md:text-base">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        <span data-i18n="backHome">Laman Utama</span>
+      </button>
+
+      <div class="text-center flex-1">
+        <h2 class="font-bubble text-2xl md:text-4xl text-gray-800" data-i18n="myArtTitle">Galeri Karya Saya</h2>
+        <p class="text-xs md:text-sm font-bold text-emerald-600" data-i18n="myArtSubtitle">Lukisan yang telah disimpan dalam peranti ini</p>
+      </div>
+
+      <button onclick="App.openThemes()" class="btn-chunky px-4 py-2 bg-pink-500 text-white text-xs md:text-sm shadow">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span data-i18n="newDrawing">Lukis Lagi</span>
+      </button>
+    </div>
+
+    <div id="myArtGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <!-- Injected by JS -->
+    </div>
+  </section>
+
+  <!-- Screen 5: Colouring Studio -->
+  <section id="screenStudio" class="screen flex-1 flex-col h-[calc(100vh-68px)] p-0 m-0 relative">
+    
+    <!-- Top Bar of Studio -->
+    <div class="bg-white px-3 py-2 border-b-2 border-amber-200 flex flex-wrap items-center justify-between gap-2 z-20 shadow-sm no-print">
+      <div class="flex items-center gap-2">
+        <button onclick="App.returnToGallery()" class="btn-chunky px-3 py-1.5 bg-gray-100 text-gray-700 text-xs md:text-sm">
+          <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          <span class="hidden sm:inline" data-i18n="gallery">Galeri</span>
+        </button>
+        <span id="studioDrawingTitle" class="font-bubble text-base md:text-xl text-pink-600 truncate max-w-[140px] sm:max-w-xs">
+          Tajuk Gambar
+        </span>
+      </div>
+
+      <div class="flex items-center gap-1.5 md:gap-2">
+        <button onclick="Studio.undo()" id="btnUndo" class="btn-chunky px-2.5 py-1.5 bg-amber-400 text-amber-950 text-xs md:text-sm" title="Undo">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/>
+          </svg>
+          <span class="hidden md:inline" data-i18n="undo">Undo</span>
+        </button>
+        <button onclick="Studio.redo()" id="btnRedo" class="btn-chunky px-2.5 py-1.5 bg-amber-400 text-amber-950 text-xs md:text-sm" title="Redo">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13"/>
+          </svg>
+          <span class="hidden md:inline" data-i18n="redo">Redo</span>
+        </button>
+        <button onclick="Studio.confirmReset()" class="btn-chunky px-2.5 py-1.5 bg-red-500 text-white text-xs md:text-sm" title="Padam Semua">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          <span class="hidden md:inline" data-i18n="reset">Padam Semua</span>
+        </button>
+        <!-- Save Artwork Button -->
+        <button onclick="Studio.saveArtwork()" class="btn-chunky px-3 py-1.5 bg-emerald-500 text-white text-xs md:text-sm" title="Simpan Gambar">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+          </svg>
+          <span class="hidden sm:inline" data-i18n="save">Simpan</span>
+        </button>
+        <!-- Print Button -->
+        <button onclick="Studio.printArtwork()" class="btn-chunky px-3 py-1.5 bg-sky-500 text-white text-xs md:text-sm" title="Cetak">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          <span class="hidden sm:inline" data-i18n="print">Cetak</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+      
+      <!-- Mobile Backdrop Overlay when Drawer is Open -->
+      <div id="paletteBackdrop" onclick="Studio.toggleToolsDrawer(false)" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden md:hidden transition-opacity opacity-0"></div>
+
+      <!-- Studio Left Sidebar / Mobile Collapsible Drawer -->
+      <div id="studioSidebar" class="w-full md:w-80 bg-white border-r-2 border-amber-200 flex flex-col p-3.5 gap-3 overflow-y-auto shadow-md z-20 no-print">
+        
+        <!-- Mobile Drawer Header -->
+        <div class="flex md:hidden items-center justify-between pb-2 border-b border-amber-100 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-pink-100 text-pink-600">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+              </svg>
+            </div>
+            <span class="font-bubble text-base text-gray-800" data-i18n="drawerTitle">Pilihan Warna & Alat</span>
+          </div>
+          <button onclick="Studio.toggleToolsDrawer(false)" class="btn-chunky px-4 py-1.5 bg-emerald-500 text-white text-xs shadow-md">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span data-i18n="done">Siap</span>
+          </button>
+        </div>
+
+        <!-- Mode Switcher -->
+        <div>
+          <div class="text-xs font-bubble text-gray-500 mb-1" data-i18n="mode">MOD MEWARNA:</div>
+          <div class="grid grid-cols-2 gap-2 bg-amber-50 p-1 rounded-2xl border-2 border-amber-200">
+            <button id="modeFillBtn" onclick="Studio.setMode('fill')" class="py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm flex items-center justify-center gap-1.5 bg-pink-500 text-white shadow">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M15 4V2m0 16v-2m8-6h-2M9 12H7m11.3-6.7l-1.4 1.4M6.1 17.9l-1.4 1.4m0-11.3l1.4 1.4m11.3 11.3l1.4 1.4M2 22l10-10"/>
+              </svg>
+              <span data-i18n="modeFill">Sentuh Isi</span>
+            </button>
+            <button id="modeDrawBtn" onclick="Studio.setMode('draw')" class="py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm flex items-center justify-center gap-1.5 text-gray-600">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18.375 2.625a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.375-9.375z"/><path d="M14 8l2 2"/>
+              </svg>
+              <span data-i18n="modeDraw">Bebas Melukis</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tool Selection: Berus vs Pemadam -->
+        <div id="brushToolsSection">
+          <div class="text-xs font-bubble text-gray-500 mb-1" data-i18n="tool">ALAT:</div>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="toolBrushBtn" onclick="Studio.setTool('brush')" class="py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm border-2 border-pink-500 bg-pink-50 text-pink-700 flex items-center justify-center gap-1.5">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 114.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 4.54 1.15 6.04-.33 1.17-1.15 1.17-3.03 0-4.2l-1.04-.51z"/>
+              </svg>
+              <span data-i18n="toolBrush">Berus Mewarna</span>
+            </button>
+            <button id="toolEraserBtn" onclick="Studio.setTool('eraser')" class="py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm border-2 border-gray-200 bg-white text-gray-700 flex items-center justify-center gap-1.5">
+              <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 21L20 8l-5-5L2 16l5 5z"/><path d="M18 10l-4-4"/><line x1="2" y1="21" x2="22" y2="21"/>
+              </svg>
+              <span data-i18n="toolEraser">Pemadam</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Brush Size -->
+        <div id="sizeSection">
+          <div class="text-xs font-bubble text-gray-500 mb-1" data-i18n="brushSize">SAIZ BERUS:</div>
+          <div class="flex items-center justify-around bg-gray-50 p-2 rounded-2xl border border-gray-200">
+            <button onclick="Studio.setSize(10)" id="sizeBtnSm" class="w-9 h-9 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center hover:scale-105 active:scale-95">
+              <span class="w-2.5 h-2.5 rounded-full bg-gray-700"></span>
+            </button>
+            <button onclick="Studio.setSize(22)" id="sizeBtnMd" class="w-10 h-10 rounded-full bg-pink-100 border-2 border-pink-500 flex items-center justify-center scale-110">
+              <span class="w-4 h-4 rounded-full bg-pink-600"></span>
+            </button>
+            <button onclick="Studio.setSize(38)" id="sizeBtnLg" class="w-11 h-11 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center hover:scale-105 active:scale-95">
+              <span class="w-6 h-6 rounded-full bg-gray-700"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Colour Palette Swatches & Sliders -->
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bubble text-gray-500" data-i18n="color">PILIHAN WARNA:</span>
+            <div class="flex items-center gap-1.5">
+              <div id="currentColorBubble" class="w-6 h-6 rounded-full border-2 border-white shadow-md transform transition-transform hover:scale-110" style="background-color: #FF1493;"></div>
+              <span id="currentColorHex" class="text-[10px] font-bold text-gray-400 font-mono hidden sm:inline">#FF1493</span>
+            </div>
+          </div>
+          
+          <div id="swatchesContainer" class="grid grid-cols-6 gap-1.5 pt-0.5">
+            <!-- Injected by JavaScript -->
+          </div>
+
+          <!-- Color Sliders -->
+          <div class="bg-amber-50/90 rounded-2xl p-2.5 border-2 border-amber-200 mt-1 flex flex-col gap-2 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bubble text-amber-900 flex items-center gap-1">
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-pink-500 fill-current">
+                  <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/>
+                </svg>
+                <span data-i18n="customColorTitle">Campur Warna Pelangi</span>
+              </span>
+              <div class="flex gap-1">
+                <button type="button" onclick="Studio.setTone('vibrant')" class="text-[9px] font-bubble px-2 py-0.5 rounded-full bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 active:scale-95 transition-transform" data-i18n="presetVibrant">Terang</button>
+                <button type="button" onclick="Studio.setTone('pastel')" class="text-[9px] font-bubble px-2 py-0.5 rounded-full bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 active:scale-95 transition-transform" data-i18n="presetPastel">Pastel</button>
+                <button type="button" onclick="Studio.setTone('deep')" class="text-[9px] font-bubble px-2 py-0.5 rounded-full bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 active:scale-95 transition-transform" data-i18n="presetDeep">Gelap</button>
+              </div>
+            </div>
+
+            <!-- Hue Slider -->
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold text-gray-500 w-12 flex-shrink-0" data-i18n="sliderHue">Warna:</span>
+              <div class="flex-1 relative flex items-center">
+                <input type="range" id="hueSlider" min="0" max="360" value="330" 
+                       class="color-slider rainbow-track w-full h-4 rounded-full appearance-none cursor-pointer"
+                       oninput="Studio.onSliderColorChange()">
+              </div>
+            </div>
+
+            <!-- Lightness Slider -->
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold text-gray-500 w-12 flex-shrink-0" data-i18n="sliderLight">Ton:</span>
+              <div class="flex-1 relative flex items-center">
+                <input type="range" id="lightnessSlider" min="15" max="85" value="50" 
+                       class="color-slider lightness-track w-full h-4 rounded-full appearance-none cursor-pointer"
+                       oninput="Studio.onSliderColorChange()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Studio Workspace -->
+      <div id="studioStage" class="studio-workspace flex-1 flex items-center justify-center p-2 sm:p-4 relative">
+        
+        <!-- Floating Zoom & Pan HUD Overlay -->
+        <div class="absolute top-4 right-4 z-30 flex flex-col gap-2 items-center no-print">
+          <button onclick="Studio.zoomIn()" class="zoom-hud-btn" title="Zoom In">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="12" y2="12"/>
+            </svg>
+          </button>
+          <div id="hudZoomText" class="text-[11px] font-bubble bg-white/95 px-2 py-0.5 rounded-full border border-amber-300 text-gray-700 shadow font-bold">
+            100%
+          </div>
+          <button onclick="Studio.zoomOut()" class="zoom-hud-btn" title="Zoom Out">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <button onclick="Studio.resetZoom()" class="zoom-hud-btn" title="Muat Semula / Fit">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+          <button id="hudPanToggleBtn" onclick="Studio.togglePanMode()" class="zoom-hud-btn" title="Gerak Lukisan / Pan">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 11V6a2 2 0 00-4 0v5"/><path d="M14 10V4a2 2 0 00-4 0v7"/><path d="M10 10.5V6a2 2 0 00-4 0v8"/><path d="M6 14v1a7 7 0 0014 0v-4a2 2 0 00-4 0v2"/>
+            </svg>
+          </button>
+        </div>
+
+        <div id="zoomHintBanner" class="absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none opacity-0 transition-opacity duration-300 bg-gray-900/80 text-white text-xs font-bubble px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 fill-amber-300">
+            <path d="M18 11V6a2 2 0 00-4 0v5m-4-1V4a2 2 0 00-4 0v7m-4-.5V6a2 2 0 00-4 0v8a7 7 0 0014 0v-4a2 2 0 00-4 0v2"/>
+          </svg>
+          <span id="zoomHintText">Mod Gerak: Seret lukisan untuk lihat bahagian lain</span>
+        </div>
+
+        <!-- Canvas Viewport -->
+        <div id="canvasViewport" class="canvas-container relative flex items-center justify-center">
+          <canvas id="drawingCanvas" width="900" height="900" class="max-w-full max-h-full"></canvas>
+        </div>
+
+        <!-- Chunky Bottom Quick Bar for Mobile -->
+        <div class="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 md:hidden flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-2 rounded-full shadow-2xl border-2 border-amber-300 no-print">
+          <button onclick="Studio.toggleModeQuick()" class="btn-chunky px-3 py-1.5 bg-amber-100 text-amber-950 text-xs shadow-sm flex items-center gap-1.5">
+            <span id="mobileModeIcon">
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 4V2m0 16v-2m8-6h-2M9 12H7m11.3-6.7l-1.4 1.4M6.1 17.9l-1.4 1.4m0-11.3l1.4 1.4m11.3 11.3l1.4 1.4M2 22l10-10"/></svg>
+            </span>
+            <span id="mobileModeText" data-i18n="modeFill">Sentuh Isi</span>
+          </button>
+
+          <button onclick="Studio.toggleToolQuick()" class="btn-chunky px-2.5 py-1.5 bg-gray-100 text-gray-800 text-xs shadow-sm flex items-center gap-1">
+            <span id="mobileToolIcon">
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 114.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 4.54 1.15 6.04-.33 1.17-1.15 1.17-3.03 0-4.2l-1.04-.51z"/></svg>
+            </span>
+          </button>
+
+          <button onclick="Studio.toggleToolsDrawer(true)" class="btn-chunky px-3.5 py-1.5 bg-gradient-to-r from-pink-500 to-orange-400 text-white text-xs shadow-md flex items-center gap-2">
+            <div id="mobileColorBubble" class="w-5 h-5 rounded-full border-2 border-white shadow-sm flex-shrink-0" style="background-color: #FF1493;"></div>
+            <span data-i18n="colorButton">Warna</span>
+            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+
+          <button onclick="Studio.cycleBrushSize()" class="btn-chunky px-2.5 py-1.5 bg-amber-100 text-amber-900 text-xs shadow-sm flex items-center justify-center" title="Tukar Saiz">
+            <span id="mobileSizeDot" class="w-3.5 h-3.5 rounded-full bg-pink-600"></span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- In-Page Native Print Container (Hidden on Screen, Visible on Print) -->
+  <div id="printArea">
+    <div class="w-full max-w-xl text-center">
+      <h1 id="printAreaTitle" class="font-bubble text-3xl text-gray-900 mb-4">Coloring Time</h1>
+      <img id="printAreaImage" src="" alt="Artwork to Print" class="mx-auto rounded-xl shadow-sm border border-gray-200">
+      <p class="font-bubble text-sm text-gray-500 mt-4 tracking-wider">Kinder Klub | All Rights Reserved</p>
+    </div>
+  </div>
+
+  <!-- Print Options Modal -->
+  <div id="printModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border-4 border-sky-400">
+      <div class="w-16 h-16 mx-auto mb-3 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center">
+        <svg viewBox="0 0 24 24" class="w-8 h-8 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+      </div>
+      <h3 class="font-bubble text-2xl text-gray-800 mb-1" data-i18n="printOptionTitle">Pilihan Cetak PDF</h3>
+      <p class="text-xs text-gray-600 font-bold mb-5" data-i18n="printOptionDesc">Jana helaian A4 dalam format dokumen PDF sebenar</p>
+      
+      <div class="flex flex-col gap-2.5">
+        <!-- Print / PDF Coloured -->
+        <button type="button" onclick="Studio.openPrintSheet(true)" class="btn-chunky py-3 bg-pink-500 text-white text-sm">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span data-i18n="printColoured">Helaian Berwarna (PDF)</span>
+        </button>
+
+        <!-- Print / PDF Outline -->
+        <button type="button" onclick="Studio.openPrintSheet(false)" class="btn-chunky py-3 bg-gray-800 text-white text-sm">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span data-i18n="printOutline">Helaian Garisan Sahaja (PDF)</span>
+        </button>
+
+        <button type="button" onclick="Studio.closePrintModal()" class="text-xs text-gray-500 font-bold mt-2 hover:underline" data-i18n="close">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated A4 Print & PDF Sheet Preview Modal -->
+  <div id="printSheetModal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 hidden flex flex-col items-center justify-between p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-white rounded-3xl p-4 sm:p-6 max-w-lg w-full flex flex-col items-center shadow-2xl border-4 border-sky-400 my-auto">
+      <div class="flex items-center justify-between w-full mb-3 pb-2 border-b border-gray-100">
+        <div>
+          <h3 id="printSheetTitle" class="font-bubble text-xl sm:text-2xl text-gray-800" data-i18n="printSheetTitle">Helaian Cetak PDF</h3>
+          <p class="text-[11px] sm:text-xs text-gray-500 font-bold" data-i18n="printSheetDesc">Dokumen saiz A4 sedia untuk disimpan atau dicetak</p>
+        </div>
+        <button type="button" onclick="Studio.closePrintSheet()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bubble hover:bg-gray-200">✕</button>
+      </div>
+
+      <!-- Printable A4 Frame Card -->
+      <div id="printableCardFrame" class="w-full bg-white rounded-2xl border-2 border-gray-300 p-4 shadow-sm flex flex-col items-center text-center mb-3">
+        <h4 id="sheetPreviewHeading" class="font-bubble text-lg sm:text-xl text-gray-800 mb-2">Coloring Time</h4>
+        <div class="w-full aspect-square max-w-[320px] rounded-xl overflow-hidden bg-white border border-gray-100 flex items-center justify-center shadow-inner">
+          <img id="printSheetImg" src="" alt="Helaian Cetak" class="w-full h-full object-contain select-none pointer-events-auto">
+        </div>
+        <div class="w-full flex justify-between items-center text-[10px] text-gray-400 font-bold mt-3 px-2 border-t border-gray-100 pt-2">
+          <span>Kinder Klub</span>
+          <span>Preschool Art Studio</span>
+        </div>
+      </div>
+
+      <!-- Mobile Tip -->
+      <div class="bg-emerald-50 border border-emerald-300 rounded-xl p-2.5 text-center text-emerald-900 text-xs font-bold mb-4 w-full flex items-center justify-center gap-1.5">
+        <svg viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0 fill-emerald-600"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        <span data-i18n="printMobileTip">Tekan butang di bawah untuk simpan fail PDF ke peranti anda.</span>
+      </div>
+
+      <!-- Action Buttons (Single prominent PDF button, 'Cetak Sekarang' button removed) -->
+      <div class="flex flex-col items-center gap-2 w-full">
+        <button type="button" id="btnExportPDF" onclick="Studio.downloadOrSharePDF()" class="w-full btn-chunky py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm sm:text-base shadow-lg flex items-center justify-center gap-2">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
+          </svg>
+          <span data-i18n="savePdfBtn">Simpan / Kongsi Fail PDF</span>
+        </button>
+
+        <button type="button" onclick="Studio.closePrintSheet()" class="w-full btn-chunky py-2 bg-gray-100 text-gray-700 text-xs mt-1">
+          <span data-i18n="close">Tutup</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Success & Device Download Modal -->
+  <div id="saveSuccessModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-5 max-w-sm w-full text-center shadow-2xl border-4 border-emerald-400">
+      <div class="w-14 h-14 mx-auto mb-2 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+        <svg viewBox="0 0 24 24" class="w-7 h-7 svg-icon" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h3 class="font-bubble text-2xl text-gray-800 mb-1" data-i18n="saveSuccessTitle">Karya Berjaya Disimpan!</h3>
+      <p class="text-xs text-gray-600 font-bold mb-3" data-i18n="saveSuccessDesc">Lukisan ini telah disimpan ke peranti anda & galeri Karya Saya!</p>
+      
+      <!-- Preview Image to allow Long-Press Save on iOS -->
+      <div class="w-48 h-48 mx-auto mb-3 bg-gray-50 rounded-2xl border-2 border-emerald-200 overflow-hidden shadow-inner flex items-center justify-center p-1.5">
+        <img id="savedModalPreviewImg" src="" alt="Saved Artwork" class="w-full h-full object-contain rounded-xl select-none pointer-events-auto">
+      </div>
+
+      <p class="text-[11px] text-gray-500 font-bold mb-4" data-i18n="saveTipLongPress">Tip: Tekan lama pada gambar untuk simpan ke Galeri Foto jika muat turun tidak bermula automatik.</p>
+
+      <div class="flex flex-col gap-2">
+        <div class="flex gap-2">
+          <button type="button" onclick="Studio.shareSavedImage()" class="flex-1 btn-chunky py-2.5 bg-sky-500 text-white text-xs">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="saveToDeviceBtn">Simpan ke Telefon</span>
+          </button>
+          <button type="button" onclick="App.openMyArtworks(); Studio.closeSaveModal();" class="flex-1 btn-chunky py-2.5 bg-emerald-500 text-white text-xs" data-i18n="viewMyArt">Lihat Karya Saya</button>
+        </div>
+        <button type="button" onclick="Studio.closeSaveModal()" class="w-full btn-chunky py-2 bg-gray-200 text-gray-700 text-xs" data-i18n="close">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Success & Device Download Modal -->
+  <div id="saveSuccessModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-5 max-w-sm w-full text-center shadow-2xl border-4 border-emerald-400">
+      <div class="w-14 h-14 mx-auto mb-2 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+        <svg viewBox="0 0 24 24" class="w-7 h-7 svg-icon" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h3 class="font-bubble text-2xl text-gray-800 mb-1" data-i18n="saveSuccessTitle">Karya Berjaya Disimpan!</h3>
+      <p class="text-xs text-gray-600 font-bold mb-3" data-i18n="saveSuccessDesc">Lukisan ini telah disimpan ke peranti anda & galeri Karya Saya!</p>
+      
+      <!-- Preview Image to allow Long-Press Save on iOS -->
+      <div class="w-44 h-44 mx-auto mb-3 bg-gray-50 rounded-2xl border-2 border-emerald-200 overflow-hidden shadow-inner flex items-center justify-center p-1.5">
+        <img id="savedModalPreviewImg" src="" alt="Saved Artwork" class="w-full h-full object-contain rounded-xl">
+      </div>
+
+      <p class="text-[11px] text-gray-400 font-bold mb-4" data-i18n="saveTipLongPress">Tip: Tekan lama pada gambar untuk simpan ke Galeri Foto jika muat turun tidak bermula automatik.</p>
+
+      <div class="flex gap-2">
+        <button onclick="App.openMyArtworks(); Studio.closeSaveModal();" class="flex-1 btn-chunky py-2.5 bg-emerald-500 text-white text-xs" data-i18n="viewMyArt">Lihat Karya Saya</button>
+        <button onclick="Studio.closeSaveModal()" class="btn-chunky px-4 py-2.5 bg-gray-200 text-gray-700 text-xs" data-i18n="close">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Confirmation Modal -->
+  <div id="confirmResetModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-300">
+      <div class="w-16 h-16 mx-auto mb-3 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center">
+        <svg viewBox="0 0 24 24" class="w-8 h-8 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 21L20 8l-5-5L2 16l5 5z"/><path d="M18 10l-4-4"/><line x1="2" y1="21" x2="22" y2="21"/>
+        </svg>
+      </div>
+      <h3 class="font-bubble text-2xl text-gray-800 mb-2" data-i18n="resetConfirmTitle">Padam Semua Warna?</h3>
+      <p class="text-sm text-gray-600 font-bold mb-6" data-i18n="resetConfirmDesc">Lukisan kamu akan kembali putih bersih seperti baru!</p>
+      <div class="flex gap-3 justify-center">
+        <button onclick="Studio.cancelReset()" class="btn-chunky px-5 py-2.5 bg-gray-200 text-gray-700 text-sm" data-i18n="cancel">Batal</button>
+        <button onclick="Studio.executeReset()" class="btn-chunky px-5 py-2.5 bg-red-500 text-white text-sm" data-i18n="confirmReset">Ya, Padam!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900/90 text-white font-bubble px-6 py-3 rounded-full text-sm shadow-2xl z-50 transition-opacity opacity-0 pointer-events-none flex items-center gap-2">
+    <svg viewBox="0 0 24 24" class="w-4 h-4 fill-amber-400"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9"/></svg>
+    <span id="toastText">Berjaya!</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="w-full bg-white/70 py-3 text-center border-t border-amber-200 text-xs font-bold text-gray-500 no-print">
+    Kinder Klub | All Rights Reserved
+  </footer>
+
+  <script>
+    function getThemeSvg(themeId) {
+      const svgs = {
+        'fruits': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M32 18 C20 18 12 28 12 40 C12 52 24 58 32 60 C40 58 52 52 52 40 C52 28 44 18 32 18 Z" fill="#FF4757"/><path d="M32 12 C30 6 34 4 38 4" stroke="#2ED573" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M26 14 C30 18 34 18 38 14 C34 12 30 12 26 14 Z" fill="#2ED573"/><circle cx="24" cy="30" r="1.8" fill="#FFF"/><circle cx="34" cy="32" r="1.8" fill="#FFF"/><circle cx="42" cy="36" r="1.8" fill="#FFF"/><circle cx="28" cy="44" r="1.8" fill="#FFF"/><circle cx="36" cy="48" r="1.8" fill="#FFF"/></svg>`,
+        'vegetables': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M32 6 L32 16 M26 10 L32 16 M38 10 L32 16" stroke="#2ED573" stroke-width="4" stroke-linecap="round"/><path d="M20 20 C24 16 40 16 44 20 C42 36 34 56 32 60 C30 56 22 36 20 20 Z" fill="#FFA502"/><line x1="26" y1="28" x2="36" y2="28" stroke="#FF7F50" stroke-width="2.5" stroke-linecap="round"/><line x1="28" y1="38" x2="38" y2="38" stroke="#FF7F50" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+        'farm-animals': `<svg viewBox="0 0 64 64" class="w-10 h-10"><ellipse cx="32" cy="36" rx="20" ry="18" fill="#FFF" stroke="#2F3542" stroke-width="3"/><path d="M16 26 C12 20 8 28 14 30 Z" fill="#FF6B81"/><path d="M48 26 C52 20 56 28 50 30 Z" fill="#FF6B81"/><ellipse cx="32" cy="44" rx="12" ry="8" fill="#FFB8B8"/><circle cx="28" cy="44" r="2" fill="#2F3542"/><circle cx="36" cy="44" r="2" fill="#2F3542"/><circle cx="24" cy="30" r="3" fill="#2F3542"/><circle cx="40" cy="30" r="3" fill="#2F3542"/></svg>`,
+        'forest-animals': `<svg viewBox="0 0 64 64" class="w-10 h-10"><polygon points="32,22 14,14 18,36" fill="#FF7F50"/><polygon points="32,22 50,14 46,36" fill="#FF7F50"/><polygon points="32,54 12,32 52,32" fill="#FF7F50"/><polygon points="32,54 18,32 46,32" fill="#FFF"/><circle cx="32" cy="50" r="3" fill="#2F3542"/><circle cx="24" cy="34" r="2.5" fill="#2F3542"/><circle cx="40" cy="34" r="2.5" fill="#2F3542"/></svg>`,
+        'food-desserts': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M18 36 L22 56 L42 56 L46 36 Z" fill="#FFA502"/><path d="M16 36 C14 30 18 22 26 22 C28 18 36 18 38 22 C46 22 50 30 48 36 Z" fill="#FF6B81"/><circle cx="32" cy="18" r="4.5" fill="#FF4757"/><circle cx="25" cy="28" r="1.5" fill="#FFF"/><circle cx="33" cy="26" r="1.5" fill="#FFF"/><circle cx="39" cy="30" r="1.5" fill="#FFF"/></svg>`,
+        'land-vehicles': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M14 42 L14 34 C14 30 20 24 28 24 L36 24 C44 24 50 30 50 34 L50 42 Z" fill="#FF4757"/><circle cx="22" cy="46" r="6" fill="#2F3542"/><circle cx="22" cy="46" r="2.5" fill="#CED6E0"/><circle cx="42" cy="46" r="6" fill="#2F3542"/><circle cx="42" cy="46" r="2.5" fill="#CED6E0"/><rect x="22" y="28" width="8" height="6" rx="2" fill="#70A1FF"/><rect x="34" y="28" width="8" height="6" rx="2" fill="#70A1FF"/></svg>`,
+        'flowers-gardens': `<svg viewBox="0 0 64 64" class="w-10 h-10"><circle cx="32" cy="32" r="8" fill="#FFA502"/><circle cx="32" cy="16" r="6" fill="#FF6B81"/><circle cx="32" cy="48" r="6" fill="#FF6B81"/><circle cx="16" cy="32" r="6" fill="#FF6B81"/><circle cx="48" cy="32" r="6" fill="#FF6B81"/><circle cx="21" cy="21" r="6" fill="#FF6B81"/><circle cx="43" cy="21" r="6" fill="#FF6B81"/><circle cx="21" cy="43" r="6" fill="#FF6B81"/><circle cx="43" cy="43" r="6" fill="#FF6B81"/></svg>`,
+        'dinosaurs': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M22 54 C20 40 18 20 34 16 C42 14 48 18 48 24 C48 28 42 30 38 32 C38 42 46 48 46 54 Z" fill="#2ED573"/><circle cx="40" cy="20" r="2.5" fill="#2F3542"/><path d="M24 20 L28 24 M22 28 L26 32 M20 36 L24 40" stroke="#FFA502" stroke-width="3" stroke-linecap="round"/></svg>`,
+        'sea-life': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M48 24 C44 14 26 16 16 28 C10 34 8 44 18 44 C26 44 38 40 48 24 Z" fill="#1E90FF"/><polygon points="48,24 56,18 54,28" fill="#1E90FF"/><circle cx="22" cy="28" r="2.5" fill="#FFF"/><circle cx="22" cy="28" r="1.2" fill="#2F3542"/><path d="M12 50 Q24 44 36 50 T60 50" stroke="#70A1FF" stroke-width="3" fill="none"/></svg>`,
+        'little-creatures': `<svg viewBox="0 0 64 64" class="w-10 h-10"><ellipse cx="32" cy="38" rx="16" ry="18" fill="#FF4757"/><circle cx="32" cy="18" r="7" fill="#2F3542"/><line x1="32" y1="20" x2="32" y2="56" stroke="#2F3542" stroke-width="3"/><circle cx="24" cy="32" r="3" fill="#2F3542"/><circle cx="40" cy="32" r="3" fill="#2F3542"/><circle cx="22" cy="46" r="3" fill="#2F3542"/><circle cx="42" cy="46" r="3" fill="#2F3542"/></svg>`,
+        'cute-animals': `<svg viewBox="0 0 64 64" class="w-10 h-10"><ellipse cx="32" cy="36" rx="18" ry="16" fill="#F1F2F6"/><path d="M14 24 C10 32 16 42 20 34 Z" fill="#FFA502"/><path d="M50 24 C54 32 48 42 44 34 Z" fill="#FFA502"/><circle cx="26" cy="32" r="2.5" fill="#2F3542"/><circle cx="38" cy="32" r="2.5" fill="#2F3542"/><ellipse cx="32" cy="40" rx="4" ry="2.5" fill="#2F3542"/></svg>`,
+        'clothing-accessories': `<svg viewBox="0 0 64 64" class="w-10 h-10"><polygon points="12,48 16,24 26,34 32,18 38,34 48,24 52,48" fill="#FFD700" stroke="#ECCC68" stroke-width="2"/><circle cx="16" cy="24" r="3" fill="#FF4757"/><circle cx="32" cy="18" r="3" fill="#1E90FF"/><circle cx="48" cy="24" r="3" fill="#2ED573"/></svg>`,
+        'toys': `<svg viewBox="0 0 64 64" class="w-10 h-10"><circle cx="20" cy="20" r="7" fill="#CD84F1"/><circle cx="44" cy="20" r="7" fill="#CD84F1"/><circle cx="32" cy="36" r="16" fill="#CD84F1"/><ellipse cx="32" cy="40" rx="7" ry="5" fill="#FFF"/><circle cx="32" cy="38" r="2.5" fill="#2F3542"/><circle cx="26" cy="32" r="2" fill="#2F3542"/><circle cx="38" cy="32" r="2.5" fill="#2F3542"/></svg>`,
+        'fantasy-world': `<svg viewBox="0 0 64 64" class="w-10 h-10"><polygon points="32,8 36,24 52,24 38,34 44,50 32,40 20,50 26,34 12,24 28,24" fill="#FF9FF3"/><circle cx="32" cy="8" r="3" fill="#FFEAA7"/><circle cx="52" cy="24" r="2" fill="#FFEAA7"/><circle cx="12" cy="24" r="2" fill="#FFEAA7"/></svg>`,
+        'outer-space': `<svg viewBox="0 0 64 64" class="w-10 h-10"><circle cx="32" cy="32" r="14" fill="#6C5CE7"/><ellipse cx="32" cy="32" rx="26" ry="6" fill="none" stroke="#FDCB6E" stroke-width="4" transform="rotate(-20 32 32)"/><circle cx="26" cy="28" r="3" fill="#A29BFE"/></svg>`,
+        'nature': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M12 44 A20 20 0 0 1 52 44" fill="none" stroke="#FF7675" stroke-width="4"/><path d="M16 44 A16 16 0 0 1 48 44" fill="none" stroke="#FDCB6E" stroke-width="4"/><path d="M20 44 A12 12 0 0 1 44 44" fill="none" stroke="#55EFC4" stroke-width="4"/></svg>`,
+        'family-life': `<svg viewBox="0 0 64 64" class="w-10 h-10"><polygon points="32,14 12,30 52,30" fill="#FF7675"/><rect x="18" y="30" width="28" height="22" fill="#FFEAA7"/><rect x="28" y="40" width="8" height="12" fill="#D63031"/><rect x="36" y="16" width="5" height="10" fill="#E17055"/></svg>`,
+        'air-water-vehicles': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M32 10 C38 20 42 36 38 46 L26 46 C22 36 26 20 32 10 Z" fill="#0984E3"/><polygon points="26,46 16,52 24,40" fill="#D63031"/><polygon points="38,46 48,52 40,40" fill="#D63031"/><polygon points="32,46 36,54 32,58 28,54" fill="#FF7675"/></svg>`,
+        'occupations': `<svg viewBox="0 0 64 64" class="w-10 h-10"><path d="M16 38 C16 24 24 18 32 18 C40 18 48 24 48 38 Z" fill="#D63031"/><rect x="12" y="38" width="40" height="6" rx="3" fill="#E17055"/><circle cx="32" cy="28" r="4" fill="#FDCB6E"/></svg>`,
+        'celebrations': `<svg viewBox="0 0 64 64" class="w-10 h-10"><polygon points="32,10 16,48 48,48" fill="#A29BFE"/><circle cx="32" cy="10" r="4" fill="#FF7675"/><circle cx="24" cy="30" r="2.5" fill="#55EFC4"/><circle cx="38" cy="34" r="2.5" fill="#FFEAA7"/><circle cx="28" cy="42" r="2.5" fill="#FF7675"/></svg>`
+      };
+      return svgs[themeId] || `<svg viewBox="0 0 64 64" class="w-10 h-10"><circle cx="32" cy="32" r="16" fill="#FF7675"/></svg>`;
+    }
+
+    const THEMES_CONFIG = [
+      { id: 'fruits', nameBM: 'Buah-buahan', nameEN: 'Fruits', color: 'from-rose-400 to-red-500' },
+      { id: 'vegetables', nameBM: 'Sayur-sayuran', nameEN: 'Vegetables', color: 'from-green-400 to-teal-500' },
+      { id: 'farm-animals', nameBM: 'Haiwan Ladang', nameEN: 'Farm Animals', color: 'from-amber-400 to-orange-500' },
+      { id: 'forest-animals', nameBM: 'Haiwan Hutan', nameEN: 'Forest Animals', color: 'from-emerald-400 to-green-600' },
+      { id: 'food-desserts', nameBM: 'Makanan', nameEN: 'Food', color: 'from-pink-400 to-purple-500' },
+      { id: 'land-vehicles', nameBM: 'Kenderaan', nameEN: 'Vehicles', color: 'from-blue-400 to-indigo-500' },
+      { id: 'flowers-gardens', nameBM: 'Bunga', nameEN: 'Flowers', color: 'from-pink-300 to-rose-400' },
+      { id: 'dinosaurs', nameBM: 'Dinosaur', nameEN: 'Dinosaurs', color: 'from-emerald-500 to-teal-700' },
+      { id: 'sea-life', nameBM: 'Hidupan Laut', nameEN: 'Sea Animals', color: 'from-cyan-400 to-blue-500' },
+      { id: 'little-creatures', nameBM: 'Serangga', nameEN: 'Insects', color: 'from-lime-400 to-emerald-500' },
+      { id: 'cute-animals', nameBM: 'Haiwan Comel', nameEN: 'Cute Animals', color: 'from-pink-400 to-rose-500' },
+      { id: 'clothing-accessories', nameBM: 'Pakaian & Aksesori', nameEN: 'Clothing & Accessories', color: 'from-purple-400 to-pink-500' },
+      { id: 'toys', nameBM: 'Mainan', nameEN: 'Toys', color: 'from-yellow-400 to-amber-500' },
+      { id: 'fantasy-world', nameBM: 'Dunia Fantasi', nameEN: 'Fantasy World', color: 'from-fuchsia-400 to-purple-600' },
+      { id: 'outer-space', nameBM: 'Angkasa Lepas', nameEN: 'Outer Space', color: 'from-indigo-500 to-purple-800' },
+      { id: 'nature', nameBM: 'Alam Semula Jadi', nameEN: 'Nature', color: 'from-teal-400 to-emerald-600' },
+      { id: 'family-life', nameBM: 'Keluarga & Harian', nameEN: 'Family & Life', color: 'from-amber-300 to-orange-400' },
+      { id: 'air-water-vehicles', nameBM: 'Kenderaan Udara & Air', nameEN: 'Air & Water Vehicles', color: 'from-sky-400 to-cyan-500' },
+      { id: 'occupations', nameBM: 'Pekerjaan', nameEN: 'Occupations', color: 'from-blue-500 to-orange-500' },
+      { id: 'celebrations', nameBM: 'Perayaan & Musim', nameEN: 'Celebrations & Seasons', color: 'from-red-400 to-yellow-500' }
+    ];
+
+    const DRAWINGS_DATABASE = {
+      'fruits': [
+        { id: 'fr-1', titleBM: 'Epal', titleEN: 'Apple', outlineUrl: 'https://imglink.cc/cdn/1eCBXP5OLp.jpeg' },
+        { id: 'fr-2', titleBM: 'Pisang', titleEN: 'Banana', outlineUrl: 'https://imglink.cc/cdn/0eix_Sbj0b.jpeg' },
+        { id: 'fr-3', titleBM: 'Tembikai', titleEN: 'Watermelon', outlineUrl: 'https://imglink.cc/cdn/wyHQ5-VsG5.jpeg' },
+        { id: 'fr-4', titleBM: 'Strawberi', titleEN: 'Strawberry', outlineUrl: 'https://imglink.cc/cdn/YI1svJ4McH.jpeg' },
+        { id: 'fr-5', titleBM: 'Oren', titleEN: 'Orange', outlineUrl: 'https://imglink.cc/cdn/_P4nJZwrnj.jpeg' },
+        { id: 'fr-6', titleBM: 'Anggur', titleEN: 'Grapes', outlineUrl: 'https://imglink.cc/cdn/bdZLxLanMt.jpeg' },
+        { id: 'fr-7', titleBM: 'Nanas', titleEN: 'Pineapple', outlineUrl: 'https://imglink.cc/cdn/GyD_aEGVm-.jpeg' },
+        { id: 'fr-8', titleBM: 'Mangga', titleEN: 'Mango', outlineUrl: 'https://imglink.cc/cdn/vc_offizN0.jpeg' },
+        { id: 'fr-9', titleBM: 'Betik', titleEN: 'Papaya', outlineUrl: 'https://imglink.cc/cdn/uyAAwUfEZm.jpeg' },
+        { id: 'fr-10', titleBM: 'Pir', titleEN: 'Pear', outlineUrl: 'https://imglink.cc/cdn/UXS9xuhz02.jpeg' }
+      ],
+      'vegetables': [
+        { id: 'vg-1', titleBM: 'Lobak Merah', titleEN: 'Carrot', outlineUrl: 'https://imglink.cc/cdn/U_39McqfSd.jpeg' },
+        { id: 'vg-2', titleBM: 'Brokoli', titleEN: 'Broccoli', outlineUrl: 'https://imglink.cc/cdn/0ivRUqinpp.jpeg' },
+        { id: 'vg-3', titleBM: 'Jagung', titleEN: 'Corn', outlineUrl: 'https://imglink.cc/cdn/0xTi99lwCd.jpeg' },
+        { id: 'vg-4', titleBM: 'Terung', titleEN: 'Eggplant', outlineUrl: 'https://imglink.cc/cdn/yUb6xzVDPD.jpeg' },
+        { id: 'vg-5', titleBM: 'Timun', titleEN: 'Cucumber', outlineUrl: 'https://imglink.cc/cdn/rSvVatVaRx.jpeg' },
+        { id: 'vg-6', titleBM: 'Tomato', titleEN: 'Tomato', outlineUrl: 'https://imglink.cc/cdn/iDqQsWEU64.jpeg' },
+        { id: 'vg-7', titleBM: 'Bendi', titleEN: 'Okra', outlineUrl: 'https://imglink.cc/cdn/EMxfS2zXgm.jpeg' },
+        { id: 'vg-8', titleBM: 'Kubis', titleEN: 'Cabbage', outlineUrl: 'https://imglink.cc/cdn/j-jBEUT0ko.jpeg' },
+        { id: 'vg-9', titleBM: 'Labu', titleEN: 'Pumpkin', outlineUrl: 'https://imglink.cc/cdn/nu3awRETtF.jpeg' },
+        { id: 'vg-10', titleBM: 'Cendawan', titleEN: 'Mushroom', outlineUrl: 'https://imglink.cc/cdn/DTfknaWOc7.jpeg' }
+      ],
+      'farm-animals': [
+        { id: 'fa-1', titleBM: 'Lembu', titleEN: 'Cow', outlineUrl: 'https://imglink.cc/cdn/KztxicWlBQ.jpeg' },
+        { id: 'fa-2', titleBM: 'Ayam', titleEN: 'Chicken', outlineUrl: 'https://imglink.cc/cdn/YsPsup8DZq.jpeg' },
+        { id: 'fa-3', titleBM: 'Itik', titleEN: 'Duck', outlineUrl: 'https://imglink.cc/cdn/073ykPauLe.jpeg' },
+        { id: 'fa-4', titleBM: 'Kambing', titleEN: 'Goat', outlineUrl: 'https://imglink.cc/cdn/59KEbNJvXd.jpeg' },
+        { id: 'fa-5', titleBM: 'Biri-biri', titleEN: 'Sheep', outlineUrl: 'https://imglink.cc/cdn/eidJh2eoWp.jpeg' },
+        { id: 'fa-6', titleBM: 'Kuda', titleEN: 'Horse', outlineUrl: 'https://imglink.cc/cdn/ClphNOsrE8.jpeg' },
+        { id: 'fa-7', titleBM: 'Arnab', titleEN: 'Rabbit', outlineUrl: 'https://imglink.cc/cdn/SJomNw2iZq.jpeg' },
+        { id: 'fa-8', titleBM: 'Angsa', titleEN: 'Goose', outlineUrl: 'https://imglink.cc/cdn/2fb9CPbq_J.jpeg' },
+        { id: 'fa-9', titleBM: 'Anjing Penjaga Ladang', titleEN: 'Farm Dog', outlineUrl: 'https://imglink.cc/cdn/8Yf1l5NgXm.jpeg' },
+        { id: 'fa-10', titleBM: 'Ayam Belanda', titleEN: 'Turkey', outlineUrl: 'https://imglink.cc/cdn/wa3u2__afY.jpeg' }
+      ],
+      'forest-animals': [
+        { id: 'fo-1', titleBM: 'Gajah', titleEN: 'Elephant', outlineUrl: 'https://imglink.cc/cdn/jXoygTaUTu.jpeg' },
+        { id: 'fo-2', titleBM: 'Zirafah', titleEN: 'Giraffe', outlineUrl: 'https://imglink.cc/cdn/3tT1It18M-.jpeg' },
+        { id: 'fo-3', titleBM: 'Monyet', titleEN: 'Monkey', outlineUrl: 'https://imglink.cc/cdn/mFk7j5hZqn.jpeg' },
+        { id: 'fo-4', titleBM: 'Harimau', titleEN: 'Tiger', outlineUrl: 'https://imglink.cc/cdn/hj_uCgAWQT.jpeg' },
+        { id: 'fo-5', titleBM: 'Singa', titleEN: 'Lion', outlineUrl: 'https://imglink.cc/cdn/o8f7EERrVx.jpeg' },
+        { id: 'fo-6', titleBM: 'Beruang', titleEN: 'Bear', outlineUrl: 'https://imglink.cc/cdn/Ky_7LtbZlW.jpeg' },
+        { id: 'fo-7', titleBM: 'Rusa', titleEN: 'Deer', outlineUrl: 'https://imglink.cc/cdn/_0pJyX882w.jpeg' },
+        { id: 'fo-8', titleBM: 'Tupai', titleEN: 'Squirrel', outlineUrl: 'https://imglink.cc/cdn/WPGj_xVHm7.jpeg' },
+        { id: 'fo-9', titleBM: 'Landak', titleEN: 'Porcupine', outlineUrl: 'https://imglink.cc/cdn/5mX2NdCMJJ.jpeg' },
+        { id: 'fo-10', titleBM: 'Musang', titleEN: 'Civet', outlineUrl: 'https://imglink.cc/cdn/IG4a3hyjuG.jpeg' }
+      ],
+      'food-desserts': [
+        { id: 'fd-1', titleBM: 'Piza', titleEN: 'Pizza', outlineUrl: 'https://imglink.cc/cdn/iDzQLgumzf.jpeg' },
+        { id: 'fd-2', titleBM: 'Hamburger', titleEN: 'Hamburger', outlineUrl: 'https://imglink.cc/cdn/ZTsG574BnV.jpeg' },
+        { id: 'fd-3', titleBM: 'Aiskrim', titleEN: 'Ice Cream', outlineUrl: 'https://imglink.cc/cdn/-1hPU3txHH.jpeg' },
+        { id: 'fd-4', titleBM: 'Kek', titleEN: 'Cake', outlineUrl: 'https://imglink.cc/cdn/gangCOwc-F.jpeg' },
+        { id: 'fd-5', titleBM: 'Donat', titleEN: 'Doughnuts', outlineUrl: 'https://imglink.cc/cdn/DVmMGrfi3I.jpeg' },
+        { id: 'fd-6', titleBM: 'Mee', titleEN: 'Noodles', outlineUrl: 'https://imglink.cc/cdn/WjG1R2SAB-.jpeg' },
+        { id: 'fd-7', titleBM: 'Roti', titleEN: 'Bread', outlineUrl: 'https://imglink.cc/cdn/DYRW3IpwRs.jpeg' },
+        { id: 'fd-8', titleBM: 'Sushi', titleEN: 'Sushi', outlineUrl: 'https://imglink.cc/cdn/-6FbYEN8Kv.jpeg' },
+        { id: 'fd-9', titleBM: 'Biskut', titleEN: 'Cookies', outlineUrl: 'https://imglink.cc/cdn/Bd9a8HWbPw.jpeg' },
+        { id: 'fd-10', titleBM: 'Nasi Goreng', titleEN: 'Fried Rice', outlineUrl: 'https://imglink.cc/cdn/Qhh9i2z1or.jpeg' }
+      ],
+      'land-vehicles': [
+        { id: 'lv-1', titleBM: 'Kereta', titleEN: 'Car', outlineUrl: 'https://imglink.cc/cdn/LkYPSpZqdg.jpeg' },
+        { id: 'lv-2', titleBM: 'Bas', titleEN: 'Bus', outlineUrl: 'https://imglink.cc/cdn/ROXp4PV9Yj.jpeg' },
+        { id: 'lv-3', titleBM: 'Lori', titleEN: 'Lorry', outlineUrl: 'https://imglink.cc/cdn/y4SKqjqnkj.jpeg' },
+        { id: 'lv-4', titleBM: 'Kapal Terbang', titleEN: 'Aeroplane', outlineUrl: 'https://imglink.cc/cdn/ZRs5PdIAUL.jpeg' },
+        { id: 'lv-5', titleBM: 'Helikopter', titleEN: 'Helicopter', outlineUrl: 'https://imglink.cc/cdn/0M92eWOqcK.jpeg' },
+        { id: 'lv-6', titleBM: 'Kereta Api', titleEN: 'Train', outlineUrl: 'https://imglink.cc/cdn/nC7FnhdjcA.jpeg' },
+        { id: 'lv-7', titleBM: 'Bot', titleEN: 'Boat', outlineUrl: 'https://imglink.cc/cdn/Ny1OEtVbeL.jpeg' },
+        { id: 'lv-8', titleBM: 'Kapal', titleEN: 'Ship', outlineUrl: 'https://imglink.cc/cdn/xt8slTHb4I.jpeg' },
+        { id: 'lv-9', titleBM: 'Basikal', titleEN: 'Bicycle', outlineUrl: 'https://imglink.cc/cdn/Y7ie1Wm5uO.jpeg' },
+        { id: 'lv-10', titleBM: 'Roket', titleEN: 'Rocket', outlineUrl: 'https://imglink.cc/cdn/QESy8CAAs9.jpeg' }
+      ],
+      'flowers-gardens': [
+        { id: 'fl-1', titleBM: 'Bunga Matahari', titleEN: 'Sunflower', outlineUrl: 'https://imglink.cc/cdn/qwfhNlX0n1.jpeg' },
+        { id: 'fl-2', titleBM: 'Bunga Ros', titleEN: 'Rose', outlineUrl: 'https://imglink.cc/cdn/Fob7ZwoBDp.jpeg' },
+        { id: 'fl-3', titleBM: 'Bunga Tulip', titleEN: 'Tulip', outlineUrl: 'https://imglink.cc/cdn/MKK8Umulk0.jpeg' },
+        { id: 'fl-4', titleBM: 'Bunga Daisy', titleEN: 'Daisy', outlineUrl: 'https://imglink.cc/cdn/y7l1zguKBs.jpeg' },
+        { id: 'fl-5', titleBM: 'Bunga Raya', titleEN: 'Hibiscus', outlineUrl: 'https://imglink.cc/cdn/cjSU0Fzj4e.jpeg' },
+        { id: 'fl-6', titleBM: 'Bunga Orkid', titleEN: 'Orchid', outlineUrl: 'https://imglink.cc/cdn/RhTypsekYS.jpeg' },
+        { id: 'fl-7', titleBM: 'Bunga Lavender', titleEN: 'Lavender', outlineUrl: 'https://imglink.cc/cdn/3dEyBaPWzh.jpeg' },
+        { id: 'fl-8', titleBM: 'Bunga Teratai', titleEN: 'Lotus', outlineUrl: 'https://imglink.cc/cdn/p49bs8ftRC.jpeg' },
+        { id: 'fl-9', titleBM: 'Bunga Kertas', titleEN: 'Bougainvillea', outlineUrl: 'https://imglink.cc/cdn/v_5dq4oGDe.jpeg' },
+        { id: 'fl-10', titleBM: 'Bunga Matahari Mini', titleEN: 'Mini Sunflowers', outlineUrl: 'https://imglink.cc/cdn/Mq2j6EEjgh.jpeg' }
+      ],
+      'dinosaurs': [
+        { id: 'di-1', titleBM: 'T-Rex', titleEN: 'Tyrannosaurus Rex', outlineUrl: 'https://imglink.cc/cdn/2lzACoycSi.jpeg' },
+        { id: 'di-2', titleBM: 'Triceratops', titleEN: 'Triceratops', outlineUrl: 'https://imglink.cc/cdn/E5iWYy3rXC.jpeg' },
+        { id: 'di-3', titleBM: 'Stegosaurus', titleEN: 'Stegosaurus', outlineUrl: 'https://imglink.cc/cdn/alPov8BMgr.jpeg' },
+        { id: 'di-4', titleBM: 'Brachiosaurus', titleEN: 'Brachiosaurus', outlineUrl: 'https://imglink.cc/cdn/gYKQfjP9F9.jpeg' },
+        { id: 'di-5', titleBM: 'Parasaurolophus', titleEN: 'Parasaurolophus', outlineUrl: 'https://imglink.cc/cdn/9tbqIjw2WD.jpeg' },
+        { id: 'di-6', titleBM: 'Ankylosaurus', titleEN: 'Ankylosaurus', outlineUrl: 'https://imglink.cc/cdn/H9ESt72Tb2.jpeg' },
+        { id: 'di-7', titleBM: 'Pteranodon', titleEN: 'Pteranodon', outlineUrl: 'https://imglink.cc/cdn/7h0yYhxIrU.jpeg' },
+        { id: 'di-8', titleBM: 'Velociraptor', titleEN: 'Velociraptor', outlineUrl: 'https://imglink.cc/cdn/DwkZi6U-F2.jpeg' },
+        { id: 'di-9', titleBM: 'Spinosaurus', titleEN: 'Spinosaurus', outlineUrl: 'https://imglink.cc/cdn/Zfam31tJFi.jpeg' },
+        { id: 'di-10', titleBM: 'Diplodocus', titleEN: 'Diplodocus', outlineUrl: 'https://imglink.cc/cdn/UfKqoqw4vg.jpeg' }
+      ],
+      'sea-life': [
+        { id: 'sl-1', titleBM: 'Ikan Badut', titleEN: 'Clownfish', outlineUrl: 'https://imglink.cc/cdn/AKMAteXzKF.jpeg' },
+        { id: 'sl-2', titleBM: 'Jerung', titleEN: 'Shark', outlineUrl: 'https://imglink.cc/cdn/ejZcxYR2T6.jpeg' },
+        { id: 'sl-3', titleBM: 'Ikan Paus', titleEN: 'Whale', outlineUrl: 'https://imglink.cc/cdn/owA9DVZ09X.jpeg' },
+        { id: 'sl-4', titleBM: 'Lumba-lumba', titleEN: 'Dolphin', outlineUrl: 'https://imglink.cc/cdn/FY9euEkSAp.jpeg' },
+        { id: 'sl-5', titleBM: 'Sotong Kurita', titleEN: 'Octopus', outlineUrl: 'https://imglink.cc/cdn/g9koOzFwnY.jpeg' },
+        { id: 'sl-6', titleBM: 'Ketam', titleEN: 'Crab', outlineUrl: 'https://imglink.cc/cdn/o4vNONJvFk.jpeg' },
+        { id: 'sl-7', titleBM: 'Penyu Laut', titleEN: 'Sea Turtle', outlineUrl: 'https://imglink.cc/cdn/7yjAtzX27d.jpeg' },
+        { id: 'sl-8', titleBM: 'Obor-obor', titleEN: 'Jellyfish', outlineUrl: 'https://imglink.cc/cdn/3LTMgPA6XA.jpeg' },
+        { id: 'sl-9', titleBM: 'Kuda Laut', titleEN: 'Seahorse', outlineUrl: 'https://imglink.cc/cdn/vqD9KksiA-.jpeg' },
+        { id: 'sl-10', titleBM: 'Bintang Laut', titleEN: 'Starfish', outlineUrl: 'https://imglink.cc/cdn/ZI2IAyfm-u.jpeg' }
+      ],
+      'little-creatures': [
+        { id: 'lc-1', titleBM: 'Rama-rama', titleEN: 'Butterfly', outlineUrl: 'https://imglink.cc/cdn/nBoEV25zhL.jpeg' },
+        { id: 'lc-2', titleBM: 'Lebah', titleEN: 'Bee', outlineUrl: 'https://imglink.cc/cdn/TUJ6PKzRrk.jpeg' },
+        { id: 'lc-3', titleBM: 'Kumbang Kecil', titleEN: 'Ladybug', outlineUrl: 'https://imglink.cc/cdn/PeIJuSmEps.jpeg' },
+        { id: 'lc-4', titleBM: 'Semut', titleEN: 'Ant', outlineUrl: 'https://imglink.cc/cdn/dDHXpluljX.jpeg' },
+        { id: 'lc-5', titleBM: 'Belalang', titleEN: 'Grasshopper', outlineUrl: 'https://imglink.cc/cdn/10j0i6i1dL.jpeg' },
+        { id: 'lc-6', titleBM: 'Pepatung', titleEN: 'Dragonfly', outlineUrl: 'https://imglink.cc/cdn/yywdovtHAA.jpeg' },
+        { id: 'lc-7', titleBM: 'Ulat Beluncas', titleEN: 'Caterpillar', outlineUrl: 'https://imglink.cc/cdn/kvnL198Mug.jpeg' },
+        { id: 'lc-8', titleBM: 'Siput', titleEN: 'Snail', outlineUrl: 'https://imglink.cc/cdn/SBBJNt9bj6.jpeg' },
+        { id: 'lc-9', titleBM: 'Kumbang', titleEN: 'Beetle', outlineUrl: 'https://imglink.cc/cdn/rl8-uO2jEy.jpeg' },
+        { id: 'lc-10', titleBM: 'Nyamuk', titleEN: 'Mosquito', outlineUrl: 'https://imglink.cc/cdn/AMl1t6JAo4.jpeg' }
+      ],
+      'cute-animals': [],
+      'clothing-accessories': [],
+      'toys': [],
+      'fantasy-world': [],
+      'outer-space': [],
+      'nature': [],
+      'family-life': [],
+      'air-water-vehicles': [],
+      'occupations': [],
+      'celebrations': []
+    };
+
+    const PALETTE_COLORS = [
+      '#FF1493', '#FF4081', '#FF6B8B', '#FF7A00', '#FFA502', '#FFD200',
+      '#38E038', '#00C853', '#00D2D3', '#0984E3', '#6C5CE7', '#9C27B0',
+      '#E84393', '#FD79A8', '#FFEAA7', '#55EFC4', '#81ECEC', '#74B9FF',
+      '#A29BFE', '#D6A2E8', '#8D6E63', '#6D4C41', '#2D3436', '#636E72',
+      '#B2BEC3', '#DFE6E9', '#FFFFFF', '#FDCB6E', '#E17055', '#D63031'
+    ];
+
+    const I18N = {
+      ms: {
+        homeBadge: "Jom Cipta Karya Ajaib Kamu!",
+        homeTitle: "Jom Mewarna!",
+        homeSubtitle: "Pilih gambar comel kegemaran kamu, pilih warna ceria dan warnakan dengan mudah!",
+        btnStartText: "Jom Mewarna",
+        myArtBtn: "Karya Saya",
+        myArtTitle: "Galeri Karya Saya",
+        myArtSubtitle: "Lukisan yang telah disimpan dalam peranti ini",
+        newDrawing: "Lukis Lagi",
+        emptyMyArt: "Belum ada karya yang disimpan. Jom mula mewarna dan tekan butang 'Simpan'!",
+        deleteArt: "Padam",
+        openArt: "Buka Semula",
+        themesTitle: "Pilih Tema",
+        themesSubtitle: "Nak warnakan gambar apa hari ini?",
+        themeSearchPlaceholder: "Cari tema...",
+        step1: "1. Pilih Tema",
+        step2: "2. Pilih Gambar",
+        step3: "3. Sentuh & Warna",
+        step4: "4. Simpan & Cetak!",
+        drawingsCount: "Gambar Tersedia",
+        comingSoon: "Akan Datang",
+        backThemes: "Kembali ke Tema",
+        backHome: "Laman Utama",
+        uploadOwn: "Muat Naik Gambar",
+        colourNow: "Warna Sekarang",
+        gallery: "Galeri",
+        undo: "Undo",
+        redo: "Redo",
+        reset: "Padam Semua",
+        save: "Simpan",
+        print: "Cetak",
+        mode: "MOD MEWARNA:",
+        modeFill: "Sentuh Isi",
+        modeDraw: "Bebas Melukis",
+        tool: "ALAT:",
+        toolBrush: "Berus Mewarna",
+        toolEraser: "Pemadam",
+        brushSize: "SAIZ BERUS:",
+        color: "PILIHAN WARNA:",
+        customColorTitle: "Campur Warna Pelangi",
+        sliderHue: "Warna:",
+        sliderLight: "Ton:",
+        presetVibrant: "Terang",
+        presetPastel: "Pastel",
+        presetDeep: "Gelap",
+        drawerTitle: "Pilihan Warna & Alat",
+        done: "Siap",
+        colorButton: "Warna",
+        fit: "Fit",
+        panModeActiveHint: "Mod Gerak: Seret lukisan untuk lihat bahagian lain",
+        panTip: "Tip: Guna 2 jari untuk gerak atau tekan butang gerak",
+        resetConfirmTitle: "Padam Semua Warna?",
+        resetConfirmDesc: "Lukisan kamu akan kembali putih bersih seperti baru!",
+        cancel: "Batal",
+        confirmReset: "Ya, Padam!",
+        printOptionTitle: "Pilihan Cetak PDF",
+        printOptionDesc: "Jana helaian A4 dalam format dokumen PDF sebenar",
+        printColoured: "Helaian Berwarna (PDF)",
+        printOutline: "Helaian Garisan Sahaja (PDF)",
+        printSheetTitle: "Helaian Cetak PDF",
+        printSheetDesc: "Dokumen saiz A4 sedia untuk disimpan atau dicetak",
+        savePdfBtn: "Simpan / Kongsi Fail PDF",
+        printMobileTip: "Tekan butang di bawah untuk simpan fail PDF ke peranti anda.",
+        saveToDeviceBtn: "Simpan ke Telefon",
+        close: "Tutup",
+        saveSuccessTitle: "Karya Berjaya Disimpan!",
+        saveSuccessDesc: "Lukisan ini telah disimpan ke peranti anda & galeri Karya Saya!",
+        saveTipLongPress: "Tip: Tekan lama pada gambar untuk simpan ke Galeri Foto jika muat turun tidak bermula automatik.",
+        viewMyArt: "Lihat Karya Saya",
+        savedToast: "Karya berjaya disimpan!",
+        emptyTitle: "Gambar untuk tema ini akan ditambah nanti!",
+        emptyDesc: "Jom cuba 10 tema lain yang sudah sedia mempunyai 100 gambar comel!",
+        pickAnotherTheme: "Pilih Tema Lain"
+      },
+      en: {
+        homeBadge: "Let's Create Your Magic Art!",
+        homeTitle: "Let's Colour!",
+        homeSubtitle: "Pick your favourite cute picture, pick bright colours and colour with ease!",
+        btnStartText: "Start Colouring",
+        myArtBtn: "My Artworks",
+        myArtTitle: "My Saved Artworks",
+        myArtSubtitle: "Paintings saved on this device",
+        newDrawing: "Colour More",
+        emptyMyArt: "No saved artworks yet. Start colouring and tap 'Save'!",
+        deleteArt: "Delete",
+        openArt: "Re-open",
+        themesTitle: "Choose a Theme",
+        themesSubtitle: "What do you want to colour today?",
+        themeSearchPlaceholder: "Search theme...",
+        step1: "1. Pick a Theme",
+        step2: "2. Choose Drawing",
+        step3: "3. Tap & Colour",
+        step4: "4. Save & Print!",
+        drawingsCount: "Drawings Ready",
+        comingSoon: "Coming Soon",
+        backThemes: "Back to Themes",
+        backHome: "Home",
+        uploadOwn: "Upload Image",
+        colourNow: "Colour Now",
+        gallery: "Gallery",
+        undo: "Undo",
+        redo: "Redo",
+        reset: "Reset All",
+        save: "Save",
+        print: "Print",
+        mode: "COLOURING MODE:",
+        modeFill: "Tap to Fill",
+        modeDraw: "Freehand Draw",
+        tool: "TOOL:",
+        toolBrush: "Colouring Brush",
+        toolEraser: "Eraser",
+        brushSize: "BRUSH SIZE:",
+        color: "COLOUR PALETTE:",
+        customColorTitle: "Mix Rainbow Colour",
+        sliderHue: "Hue:",
+        sliderLight: "Tone:",
+        presetVibrant: "Bright",
+        presetPastel: "Pastel",
+        presetDeep: "Deep",
+        drawerTitle: "Color & Brush Tools",
+        done: "Done",
+        colorButton: "Color",
+        fit: "Fit",
+        panModeActiveHint: "Pan Mode: Drag drawing to view other parts",
+        panTip: "Tip: Use 2 fingers to move or tap pan tool",
+        resetConfirmTitle: "Reset all colours?",
+        resetConfirmDesc: "Your drawing will be reset to a clean blank canvas!",
+        cancel: "Cancel",
+        confirmReset: "Yes, Reset!",
+        printOptionTitle: "Print PDF Options",
+        printOptionDesc: "Generate A4 sheet in real PDF document format",
+        printColoured: "Coloured Sheet (PDF)",
+        printOutline: "Outline Only (PDF)",
+        printSheetTitle: "Colouring PDF Sheet",
+        printSheetDesc: "A4 PDF ready to save or print",
+        savePdfBtn: "Save / Share PDF File",
+        printMobileTip: "Tap button below to save PDF file to your device.",
+        saveToDeviceBtn: "Save to Phone",
+        close: "Close",
+        saveSuccessTitle: "Artwork Saved!",
+        saveSuccessDesc: "Saved directly to your device & My Artworks gallery!",
+        saveTipLongPress: "Tip: Long-press image to save to Photos if download doesn't start automatically.",
+        viewMyArt: "View My Artworks",
+        savedToast: "Artwork saved successfully!",
+        emptyTitle: "More drawings for this theme are coming soon!",
+        emptyDesc: "Explore our 10 ready themes with 100 cute drawings ready to colour!",
+        pickAnotherTheme: "Choose Another Theme"
+      }
+    };
+  </script>
+
+  <script>
+    const App = {
+      lang: 'ms',
+      currentThemeId: 'fruits',
+      currentDrawing: null,
+
+      init() {
+        this.renderThemes();
+        this.renderSwatches();
+        this.setLanguage('ms');
+      },
+
+      setLanguage(lang) {
+        this.lang = lang;
+        document.getElementById('langBM').className = lang === 'ms' 
+          ? 'px-3 py-1 text-xs md:text-sm font-bubble rounded-full transition-all bg-pink-500 text-white shadow'
+          : 'px-3 py-1 text-xs md:text-sm font-bubble rounded-full transition-all text-amber-900';
+        document.getElementById('langEN').className = lang === 'en' 
+          ? 'px-3 py-1 text-xs md:text-sm font-bubble rounded-full transition-all bg-pink-500 text-white shadow'
+          : 'px-3 py-1 text-xs md:text-sm font-bubble rounded-full transition-all text-amber-900';
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          if (I18N[lang][key]) el.textContent = I18N[lang][key];
+        });
+
+        document.getElementById('homeBadge').textContent = I18N[lang].homeBadge;
+        document.getElementById('homeTitle').textContent = I18N[lang].homeTitle;
+        document.getElementById('homeSubtitle').textContent = I18N[lang].homeSubtitle;
+        document.getElementById('btnStartText').textContent = I18N[lang].btnStartText;
+        document.getElementById('themesTitle').textContent = I18N[lang].themesTitle;
+        document.getElementById('themesSubtitle').textContent = I18N[lang].themesSubtitle;
+        document.getElementById('themeSearchInput').placeholder = I18N[lang].themeSearchPlaceholder;
+
+        if (this.currentDrawing) {
+          document.getElementById('studioDrawingTitle').textContent = lang === 'ms' ? this.currentDrawing.titleBM : this.currentDrawing.titleEN;
+        }
+
+        this.renderThemes();
+        if (this.currentThemeId) this.renderGallery(this.currentThemeId);
+      },
+
+      showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+
+      goHome() {
+        this.showScreen('screenHome');
+      },
+
+      openThemes() {
+        this.showScreen('screenThemes');
+      },
+
+      openMyArtworks() {
+        this.renderMyArtworks();
+        this.showScreen('screenMyArt');
+      },
+
+      renderMyArtworks() {
+        const grid = document.getElementById('myArtGrid');
+        grid.innerHTML = '';
+        const savedList = JSON.parse(localStorage.getItem('coloring_time_artworks') || '[]');
+
+        if (savedList.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white/80 rounded-3xl p-8 border-4 border-dashed border-amber-300">
+              <div class="w-16 h-16 mb-4 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
+                <svg viewBox="0 0 24 24" class="w-8 h-8 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+              <h3 class="font-bubble text-xl md:text-2xl text-gray-800 mb-2">
+                ${I18N[this.lang].emptyMyArt}
+              </h3>
+              <button onclick="App.openThemes()" class="btn-chunky px-6 py-2.5 bg-pink-500 text-white text-sm mt-3">
+                ${I18N[this.lang].btnStartText}
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        savedList.forEach((item, index) => {
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-2xl p-3 shadow-md border-3 border-emerald-300 flex flex-col items-center relative';
+          card.innerHTML = `
+            <div class="w-full aspect-square rounded-xl bg-gray-50 border border-gray-200 p-2 flex items-center justify-center mb-2 overflow-hidden cursor-pointer" onclick="App.loadSavedArtwork('${item.id}')">
+              <img src="${item.thumb}" class="w-full h-full object-contain rounded-lg">
+            </div>
+            <div class="font-bubble text-xs sm:text-sm text-gray-800 text-center truncate w-full mb-1">
+              ${item.title}
+            </div>
+            <div class="text-[10px] text-gray-400 mb-2 font-bold">${item.date}</div>
+            <div class="flex gap-2 w-full">
+              <button onclick="App.loadSavedArtwork('${item.id}')" class="flex-1 py-1 text-xs font-bubble rounded-lg bg-pink-500 text-white shadow">
+                ${I18N[this.lang].openArt}
+              </button>
+              <button onclick="App.deleteSavedArtwork('${item.id}')" class="px-2 py-1 text-xs font-bubble rounded-lg bg-red-100 text-red-600 hover:bg-red-200">
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+              </button>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      },
+
+      loadSavedArtwork(savedId) {
+        const savedList = JSON.parse(localStorage.getItem('coloring_time_artworks') || '[]');
+        const target = savedList.find(i => i.id === savedId);
+        if (!target) return;
+
+        const customItem = {
+          id: target.originalDrawingId || 'saved-' + Date.now(),
+          titleBM: target.title,
+          titleEN: target.title,
+          outlineUrl: target.outlineUrl || '',
+          savedImageData: target.thumb
+        };
+        this.openStudio(customItem);
+      },
+
+      deleteSavedArtwork(savedId) {
+        let savedList = JSON.parse(localStorage.getItem('coloring_time_artworks') || '[]');
+        savedList = savedList.filter(i => i.id !== savedId);
+        localStorage.setItem('coloring_time_artworks', JSON.stringify(savedList));
+        this.renderMyArtworks();
+        App.showToast("Karya dipadam.");
+      },
+
+      filterThemes(query) {
+        const q = query.toLowerCase().trim();
+        const cards = document.querySelectorAll('.theme-card-item');
+        cards.forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(q) ? 'flex' : 'none';
+        });
+      },
+
+      renderThemes() {
+        const grid = document.getElementById('themesGrid');
+        grid.innerHTML = '';
+
+        THEMES_CONFIG.forEach(theme => {
+          const name = this.lang === 'ms' ? theme.nameBM : theme.nameEN;
+          const count = (DRAWINGS_DATABASE[theme.id] || []).length;
+          const card = document.createElement('div');
+          card.className = 'theme-card-item bg-white rounded-3xl p-4 shadow-md border-3 border-amber-200 hover:border-pink-500 hover:-translate-y-1.5 active:translate-y-1 cursor-pointer transition-all flex flex-col items-center text-center';
+          card.onclick = () => this.openGallery(theme.id);
+
+          const badgeHtml = count > 0 
+            ? `<span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                 ${count} ${I18N[this.lang].drawingsCount}
+               </span>`
+            : `<span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                 ${I18N[this.lang].comingSoon}
+               </span>`;
+
+          card.innerHTML = `
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr ${theme.color} flex items-center justify-center shadow-md mb-2">
+              ${getThemeSvg(theme.id)}
+            </div>
+            <h4 class="font-bubble text-base md:text-lg text-gray-800 leading-tight mb-1">${name}</h4>
+            ${badgeHtml}
+          `;
+          grid.appendChild(card);
+        });
+      },
+
+      openGallery(themeId) {
+        this.currentThemeId = themeId;
+        const theme = THEMES_CONFIG.find(t => t.id === themeId);
+        const count = (DRAWINGS_DATABASE[themeId] || []).length;
+        document.getElementById('galleryThemeTitle').textContent = this.lang === 'ms' ? theme.nameBM : theme.nameEN;
+        document.getElementById('galleryThemeCount').textContent = count > 0 
+          ? `${count} ${I18N[this.lang].drawingsCount}`
+          : I18N[this.lang].comingSoon;
+        this.renderGallery(themeId);
+        this.showScreen('screenGallery');
+      },
+
+      renderGallery(themeId) {
+        const grid = document.getElementById('drawingsGrid');
+        grid.innerHTML = '';
+        const list = DRAWINGS_DATABASE[themeId] || [];
+
+        if (list.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white/80 rounded-3xl p-8 border-4 border-dashed border-amber-300">
+              <div class="w-20 h-20 mb-4 bg-amber-100 rounded-3xl flex items-center justify-center text-amber-600">
+                <svg viewBox="0 0 64 64" class="w-12 h-12">
+                  <path d="M12 48 L20 16 L44 16 L52 48 Z" fill="#FFA502"/>
+                  <rect x="22" y="24" width="20" height="16" fill="#FFF"/>
+                  <line x1="32" y1="16" x2="32" y2="48" stroke="#FF4757" stroke-width="3"/>
+                </svg>
+              </div>
+              <h3 class="font-bubble text-2xl md:text-3xl text-gray-800 mb-2">
+                ${I18N[this.lang].emptyTitle}
+              </h3>
+              <p class="text-gray-500 font-bold text-sm md:text-base max-w-md mb-6">
+                ${I18N[this.lang].emptyDesc}
+              </p>
+              <button onclick="App.openThemes()" class="btn-chunky px-6 py-3 bg-pink-500 text-white text-base">
+                <svg viewBox="0 0 24 24" class="w-5 h-5 svg-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+                ${I18N[this.lang].pickAnotherTheme}
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        list.forEach((item, index) => {
+          const title = this.lang === 'ms' ? item.titleBM : item.titleEN;
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-2xl p-3 shadow-md border-3 border-yellow-200 hover:border-pink-500 hover:-translate-y-1 cursor-pointer transition-all flex flex-col items-center';
+          card.onclick = () => this.openStudio(item);
+
+          const safeUrl = item.outlineUrl ? item.outlineUrl.trim() : '';
+          const thumbContent = safeUrl !== ''
+            ? `<img src="${safeUrl}" alt="${title}" class="w-full h-full object-contain pointer-events-none rounded-lg" loading="lazy" onerror="this.onerror=null;this.src='https://images.weserv.nl/?url='+encodeURIComponent('${safeUrl}')+'&output=png';">`
+            : `<svg viewBox="0 0 200 200" class="w-full h-full pointer-events-none">${Studio.generateOutlineSVG(item.id, 200, 200)}</svg>`;
+
+          card.innerHTML = `
+            <div class="w-full aspect-square rounded-xl bg-gray-50 border border-gray-200 p-2 flex items-center justify-center mb-2 overflow-hidden">
+              ${thumbContent}
+            </div>
+            <div class="font-bubble text-xs sm:text-sm text-gray-800 text-center truncate w-full mb-1">
+              ${index + 1}. ${title}
+            </div>
+            <button class="w-full py-1 text-xs font-bubble rounded-lg bg-pink-500 text-white shadow hover:bg-pink-600">
+              ${I18N[this.lang].colourNow}
+            </button>
+          `;
+          grid.appendChild(card);
+        });
+      },
+
+      openStudio(drawingItem) {
+        this.currentDrawing = drawingItem;
+        const title = this.lang === 'ms' ? drawingItem.titleBM : drawingItem.titleEN;
+        document.getElementById('studioDrawingTitle').textContent = title;
+        this.showScreen('screenStudio');
+        Studio.loadDrawing(drawingItem);
+      },
+
+      returnToGallery() {
+        this.openGallery(this.currentThemeId);
+      },
+
+      renderSwatches() {
+        const container = document.getElementById('swatchesContainer');
+        container.innerHTML = '';
+        PALETTE_COLORS.forEach((hex, index) => {
+          const btn = document.createElement('button');
+          btn.className = 'swatch-item w-8 h-8 rounded-full border-2 border-white shadow hover:scale-115 active:scale-95 transition-transform flex-shrink-0';
+          btn.style.backgroundColor = hex;
+          if (index === 0) btn.classList.add('ring-3', 'ring-pink-500');
+          btn.onclick = () => Studio.setColor(hex, btn);
+          container.appendChild(btn);
+        });
+      },
+
+      handleCustomUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const customItem = {
+            id: 'custom-' + Date.now(),
+            titleBM: 'Lukisan Saya',
+            titleEN: 'My Own Drawing',
+            outlineUrl: e.target.result,
+            isCustom: true
+          };
+          this.openStudio(customItem);
+        };
+        reader.readAsDataURL(file);
+      },
+
+      showToast(msg) {
+        const toast = document.getElementById('toast');
+        document.getElementById('toastText').textContent = msg;
+        toast.classList.remove('opacity-0');
+        setTimeout(() => toast.classList.add('opacity-0'), 2500);
+      }
+    };
+  </script>
+
+  <script>
+    /*
+      STUDIO ENGINE: FLOOD FILL, UNDO/REDO, NATIVE PRINT & DEVICE STORAGE
+    */
+    const Studio = {
+      canvas: null,
+      ctx: null,
+      colorCanvas: null,
+      colorCtx: null,
+      outlineCanvas: null,
+      outlineCtx: null,
+      currentColor: '#FF1493',
+      currentHue: 330,
+      currentLightness: 54,
+      currentSaturation: 100,
+
+      isDrawerOpen: false,
+
+      currentMode: 'fill',
+      currentTool: 'brush',
+      brushSize: 22,
+      
+      zoomLevel: 1.0,
+      panX: 0,
+      panY: 0,
+      isPanning: false,
+      panModeActive: false,
+      startPanMouseX: 0,
+      startPanMouseY: 0,
+      
+      touchStartDist: 0,
+      touchStartZoom: 1.0,
+      touchStartPanX: 0,
+      touchStartPanY: 0,
+      touchStartMidX: 0,
+      touchStartMidY: 0,
+      isPinching: false,
+
+      isDrawing: false,
+      hasDrawnStroke: false,
+      lastX: 0,
+      lastY: 0,
+
+      undoStack: [],
+      redoStack: [],
+      maxHistory: 25,
+
+      init() {
+        this.canvas = document.getElementById('drawingCanvas');
+        this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+
+        this.colorCanvas = document.createElement('canvas');
+        this.colorCanvas.width = 900;
+        this.colorCanvas.height = 900;
+        this.colorCtx = this.colorCanvas.getContext('2d', { willReadFrequently: true });
+
+        this.outlineCanvas = document.createElement('canvas');
+        this.outlineCanvas.width = 900;
+        this.outlineCanvas.height = 900;
+        this.outlineCtx = this.outlineCanvas.getContext('2d', { willReadFrequently: true });
+
+        this.bindEvents();
+        this.bindZoomGestures();
+        this.syncSliderUI();
+        this.updateUndoRedoButtons();
+      },
+
+      getCoord(e) {
+        const c = this.canvas;
+        const rect = c.getBoundingClientRect();
+        const scaleX = c.width / rect.width;
+        const scaleY = c.height / rect.height;
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        }
+
+        return {
+          x: Math.round((clientX - rect.left) * scaleX),
+          y: Math.round((clientY - rect.top) * scaleY)
+        };
+      },
+
+      bindEvents() {
+        const c = this.canvas;
+
+        const handlePointerStart = (e) => {
+          if (e.touches && e.touches.length > 1) return;
+
+          if (this.panModeActive) {
+            this.isPanning = true;
+            const p = e.touches ? e.touches[0] : e;
+            this.startPanMouseX = p.clientX - this.panX;
+            this.startPanMouseY = p.clientY - this.panY;
+            return;
+          }
+
+          e.preventDefault();
+          const { x, y } = this.getCoord(e);
+
+          if (this.currentMode === 'fill') {
+            this.floodFill(x, y, this.currentColor);
+            this.renderComposite();
+            this.pushState();
+          } else {
+            this.isDrawing = true;
+            this.hasDrawnStroke = true;
+            this.lastX = x;
+            this.lastY = y;
+            this.drawStroke(x, y, x, y);
+            this.renderComposite();
+          }
+        };
+
+        const handlePointerMove = (e) => {
+          if (this.isPanning && this.panModeActive) {
+            e.preventDefault();
+            const p = e.touches ? e.touches[0] : e;
+            this.panX = p.clientX - this.startPanMouseX;
+            this.panY = p.clientY - this.startPanMouseY;
+            this.applyTransform();
+            return;
+          }
+
+          if (!this.isDrawing || this.currentMode !== 'draw') return;
+          e.preventDefault();
+          const { x, y } = this.getCoord(e);
+          this.drawStroke(this.lastX, this.lastY, x, y);
+          this.lastX = x;
+          this.lastY = y;
+          this.renderComposite();
+        };
+
+        const handlePointerEnd = (e) => {
+          if (this.isPanning) this.isPanning = false;
+          if (this.isDrawing) {
+            this.isDrawing = false;
+            if (this.hasDrawnStroke) {
+              this.pushState();
+              this.hasDrawnStroke = false;
+            }
+            this.renderComposite();
+          }
+        };
+
+        c.addEventListener('mousedown', handlePointerStart);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerEnd);
+
+        c.addEventListener('touchstart', handlePointerStart, { passive: false });
+        window.addEventListener('touchmove', handlePointerMove, { passive: false });
+        window.addEventListener('touchend', handlePointerEnd);
+        window.addEventListener('touchcancel', handlePointerEnd);
+      },
+
+      bindZoomGestures() {
+        const stage = document.getElementById('studioStage');
+
+        stage.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const delta = e.deltaY < 0 ? 0.25 : -0.25;
+          this.setZoom(this.zoomLevel + delta);
+        }, { passive: false });
+
+        stage.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 2) {
+            e.preventDefault();
+            this.isPinching = true;
+            this.isDrawing = false;
+            this.isPanning = false;
+
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            this.touchStartDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+            this.touchStartZoom = this.zoomLevel;
+            this.touchStartPanX = this.panX;
+            this.touchStartPanY = this.panY;
+            this.touchStartMidX = (t1.clientX + t2.clientX) / 2;
+            this.touchStartMidY = (t1.clientY + t2.clientY) / 2;
+          }
+        }, { passive: false });
+
+        stage.addEventListener('touchmove', (e) => {
+          if (this.isPinching && e.touches.length === 2) {
+            e.preventDefault();
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+
+            const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+            if (this.touchStartDist > 0) {
+              const scaleRatio = currentDist / this.touchStartDist;
+              this.zoomLevel = Math.min(Math.max(this.touchStartZoom * scaleRatio, 1.0), 4.5);
+
+              const currentMidX = (t1.clientX + t2.clientX) / 2;
+              const currentMidY = (t1.clientY + t2.clientY) / 2;
+              this.panX = this.touchStartPanX + (currentMidX - this.touchStartMidX);
+              this.panY = this.touchStartPanY + (currentMidY - this.touchStartMidY);
+
+              this.applyTransform();
+            }
+          }
+        }, { passive: false });
+
+        stage.addEventListener('touchend', (e) => {
+          if (this.isPinching && e.touches.length < 2) {
+            this.isPinching = false;
+          }
+        });
+      },
+
+      loadDrawing(item) {
+        this.currentDrawing = item;
+        this.undoStack = [];
+        this.redoStack = [];
+        this.resetZoom();
+        this.toggleToolsDrawer(false);
+
+        this.colorCtx.fillStyle = '#FFFFFF';
+        this.colorCtx.fillRect(0, 0, 900, 900);
+
+        this.outlineCtx.fillStyle = '#FFFFFF';
+        this.outlineCtx.fillRect(0, 0, 900, 900);
+
+        const applyImageToOutline = (img) => {
+          const maxW = 860;
+          const maxH = 860;
+          const scale = Math.min(maxW / img.width, maxH / img.height);
+          const dw = img.width * scale;
+          const dh = img.height * scale;
+          const dx = (900 - dw) / 2;
+          const dy = (900 - dh) / 2;
+
+          this.outlineCtx.fillStyle = '#FFFFFF';
+          this.outlineCtx.fillRect(0, 0, 900, 900);
+          this.outlineCtx.drawImage(img, dx, dy, dw, dh);
+
+          try {
+            const imgData = this.outlineCtx.getImageData(0, 0, 900, 900);
+            const d = imgData.data;
+            for (let i = 0; i < d.length; i += 4) {
+              const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+              if (lum < 135) {
+                d[i] = 18;
+                d[i + 1] = 18;
+                d[i + 2] = 18;
+              } else {
+                d[i] = 255;
+                d[i + 1] = 255;
+                d[i + 2] = 255;
+              }
+            }
+            this.outlineCtx.putImageData(imgData, 0, 0);
+          } catch (e) {
+            console.warn('Canvas filter notice:', e);
+          }
+
+          if (item.savedImageData) {
+            const savedImg = new Image();
+            savedImg.onload = () => {
+              this.colorCtx.drawImage(savedImg, 0, 0, 900, 900);
+              this.renderComposite();
+              this.pushState();
+            };
+            savedImg.src = item.savedImageData;
+          } else {
+            this.renderComposite();
+            this.pushState();
+          }
+        };
+
+        const tryLoad = (srcUrl, isFallback) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            try {
+              const testCanvas = document.createElement('canvas');
+              testCanvas.width = 1;
+              testCanvas.height = 1;
+              const testCtx = testCanvas.getContext('2d');
+              testCtx.drawImage(img, 0, 0, 1, 1);
+              testCtx.getImageData(0, 0, 1, 1);
+              applyImageToOutline(img);
+            } catch (err) {
+              if (!isFallback) {
+                tryLoad('https://images.weserv.nl/?url=' + encodeURIComponent(srcUrl) + '&output=png', true);
+              } else {
+                applyImageToOutline(img);
+              }
+            }
+          };
+          img.onerror = () => {
+            if (!isFallback) {
+              tryLoad('https://images.weserv.nl/?url=' + encodeURIComponent(srcUrl) + '&output=png', true);
+            } else {
+              const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">${this.generateOutlineSVG(item.id, 900, 900)}</svg>`;
+              const fallbackImg = new Image();
+              fallbackImg.onload = () => applyImageToOutline(fallbackImg);
+              fallbackImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgMarkup);
+            }
+          };
+          img.src = srcUrl;
+        };
+
+        if (item.outlineUrl && item.outlineUrl.trim() !== '') {
+          tryLoad(item.outlineUrl, false);
+        } else {
+          const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">${this.generateOutlineSVG(item.id, 900, 900)}</svg>`;
+          const img = new Image();
+          img.onload = () => applyImageToOutline(img);
+          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgMarkup);
+        }
+      },
+
+      floodFill(startX, startY, fillHex) {
+        if (startX < 0 || startX >= 900 || startY < 0 || startY >= 900) return;
+
+        const fr = parseInt(fillHex.slice(1, 3), 16);
+        const fg = parseInt(fillHex.slice(3, 5), 16);
+        const fb = parseInt(fillHex.slice(5, 7), 16);
+
+        let outlineImgData, colorImgData;
+        try {
+          outlineImgData = this.outlineCtx.getImageData(0, 0, 900, 900);
+          colorImgData = this.colorCtx.getImageData(0, 0, 900, 900);
+        } catch (err) {
+          console.warn('Canvas pixel read fallback:', err);
+          return;
+        }
+
+        const oData = outlineImgData.data;
+        const cData = colorImgData.data;
+        const startIndex = (startY * 900 + startX) * 4;
+
+        const lum = 0.299 * oData[startIndex] + 0.587 * oData[startIndex + 1] + 0.114 * oData[startIndex + 2];
+        if (lum < 95) return;
+
+        const targetR = cData[startIndex];
+        const targetG = cData[startIndex + 1];
+        const targetB = cData[startIndex + 2];
+
+        if (Math.abs(targetR - fr) < 8 && Math.abs(targetG - fg) < 8 && Math.abs(targetB - fb) < 8) return;
+
+        const queue = [startX, startY];
+        const visited = new Uint8Array(900 * 900);
+        visited[startY * 900 + startX] = 1;
+
+        while (queue.length > 0) {
+          const cy = queue.pop();
+          const cx = queue.pop();
+          const idx = (cy * 900 + cx) * 4;
+
+          cData[idx] = fr;
+          cData[idx + 1] = fg;
+          cData[idx + 2] = fb;
+          cData[idx + 3] = 255;
+
+          const neighbors = [
+            [cx + 1, cy],
+            [cx - 1, cy],
+            [cx, cy + 1],
+            [cx, cy - 1]
+          ];
+
+          for (let i = 0; i < 4; i++) {
+            const nx = neighbors[i][0];
+            const ny = neighbors[i][1];
+
+            if (nx >= 0 && nx < 900 && ny >= 0 && ny < 900) {
+              const nPos = ny * 900 + nx;
+              if (visited[nPos] === 0) {
+                const oIdx = nPos * 4;
+                const oLum = 0.299 * oData[oIdx] + 0.587 * oData[oIdx + 1] + 0.114 * oData[oIdx + 2];
+
+                if (oLum >= 95) {
+                  const cIdx = oIdx;
+                  const diff = Math.abs(cData[cIdx] - targetR) + Math.abs(cData[cIdx + 1] - targetG) + Math.abs(cData[cIdx + 2] - targetB);
+                  if (diff < 65) {
+                    visited[nPos] = 1;
+                    queue.push(nx, ny);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        this.colorCtx.putImageData(colorImgData, 0, 0);
+      },
+
+      drawStroke(x0, y0, x1, y1) {
+        const ctx = this.colorCtx;
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = this.brushSize;
+
+        if (this.currentTool === 'eraser') {
+          ctx.strokeStyle = '#FFFFFF';
+        } else {
+          ctx.strokeStyle = this.currentColor;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+        ctx.restore();
+      },
+
+      renderComposite() {
+        this.ctx.clearRect(0, 0, 900, 900);
+        this.ctx.drawImage(this.colorCanvas, 0, 0);
+
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'multiply';
+        this.ctx.drawImage(this.outlineCanvas, 0, 0);
+        this.ctx.restore();
+      },
+
+      pushState() {
+        try {
+          const imgData = this.colorCtx.getImageData(0, 0, 900, 900);
+          this.undoStack.push(imgData);
+          if (this.undoStack.length > this.maxHistory) {
+            this.undoStack.shift();
+          }
+          this.redoStack = [];
+          this.updateUndoRedoButtons();
+        } catch (e) {
+          console.warn('Canvas pushState failed:', e);
+        }
+      },
+
+      undo() {
+        if (this.undoStack.length <= 1) return;
+        const current = this.undoStack.pop();
+        this.redoStack.push(current);
+        const previous = this.undoStack[this.undoStack.length - 1];
+        this.colorCtx.putImageData(previous, 0, 0);
+        this.renderComposite();
+        this.updateUndoRedoButtons();
+      },
+
+      redo() {
+        if (this.redoStack.length === 0) return;
+        const next = this.redoStack.pop();
+        this.undoStack.push(next);
+        this.colorCtx.putImageData(next, 0, 0);
+        this.renderComposite();
+        this.updateUndoRedoButtons();
+      },
+
+      updateUndoRedoButtons() {
+        const btnUndo = document.getElementById('btnUndo');
+        const btnRedo = document.getElementById('btnRedo');
+        if (btnUndo) {
+          btnUndo.style.opacity = this.undoStack.length > 1 ? '1' : '0.45';
+        }
+        if (btnRedo) {
+          btnRedo.style.opacity = this.redoStack.length > 0 ? '1' : '0.45';
+        }
+      },
+
+      confirmReset() {
+        document.getElementById('confirmResetModal').classList.remove('hidden');
+      },
+
+      cancelReset() {
+        document.getElementById('confirmResetModal').classList.add('hidden');
+      },
+
+      executeReset() {
+        this.cancelReset();
+        this.colorCtx.fillStyle = '#FFFFFF';
+        this.colorCtx.fillRect(0, 0, 900, 900);
+        this.renderComposite();
+        this.pushState();
+      },
+
+      setMode(mode) {
+        this.currentMode = mode;
+        const fillBtn = document.getElementById('modeFillBtn');
+        const drawBtn = document.getElementById('modeDrawBtn');
+
+        if (mode === 'fill') {
+          fillBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm flex items-center justify-center gap-1.5 bg-pink-500 text-white shadow';
+          drawBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm flex items-center justify-center gap-1.5 text-gray-600';
+          if (!this.panModeActive) this.canvas.style.cursor = 'pointer';
+        } else {
+          drawBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm flex items-center justify-center gap-1.5 bg-pink-500 text-white shadow';
+          fillBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm flex items-center justify-center gap-1.5 text-gray-600';
+          if (!this.panModeActive) this.canvas.style.cursor = 'crosshair';
+        }
+
+        this.updateMobileQuickBar();
+        if (this.panModeActive) this.togglePanMode(false);
+      },
+
+      setTool(tool) {
+        this.currentTool = tool;
+        const brushBtn = document.getElementById('toolBrushBtn');
+        const eraserBtn = document.getElementById('toolEraserBtn');
+
+        if (tool === 'brush') {
+          brushBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm border-2 border-pink-500 bg-pink-50 text-pink-700 flex items-center justify-center gap-1.5';
+          eraserBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm border-2 border-gray-200 bg-white text-gray-700 flex items-center justify-center gap-1.5';
+        } else {
+          eraserBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm border-2 border-pink-500 bg-pink-50 text-pink-700 flex items-center justify-center gap-1.5';
+          brushBtn.className = 'py-2 px-2 rounded-xl font-bubble text-xs sm:text-sm border-2 border-gray-200 bg-white text-gray-700 flex items-center justify-center gap-1.5';
+        }
+
+        this.updateMobileQuickBar();
+        if (this.panModeActive) this.togglePanMode(false);
+      },
+
+      toggleToolsDrawer(forceState = null) {
+        const sidebar = document.getElementById('studioSidebar');
+        const backdrop = document.getElementById('paletteBackdrop');
+        this.isDrawerOpen = forceState !== null ? forceState : !this.isDrawerOpen;
+
+        if (this.isDrawerOpen) {
+          sidebar.classList.add('drawer-open');
+          backdrop.classList.remove('hidden');
+          setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        } else {
+          sidebar.classList.remove('drawer-open');
+          backdrop.classList.add('opacity-0');
+          setTimeout(() => backdrop.classList.add('hidden'), 300);
+        }
+      },
+
+      toggleModeQuick() {
+        this.setMode(this.currentMode === 'fill' ? 'draw' : 'fill');
+      },
+
+      toggleToolQuick() {
+        this.setTool(this.currentTool === 'brush' ? 'eraser' : 'brush');
+      },
+
+      cycleBrushSize() {
+        const sizes = [10, 22, 38];
+        const nextIdx = (sizes.indexOf(this.brushSize) + 1) % sizes.length;
+        this.setSize(sizes[nextIdx]);
+      },
+
+      updateMobileQuickBar() {
+        const modeText = document.getElementById('mobileModeText');
+        const modeIcon = document.getElementById('mobileModeIcon');
+        const toolIcon = document.getElementById('mobileToolIcon');
+        const colorBubble = document.getElementById('mobileColorBubble');
+        const sizeDot = document.getElementById('mobileSizeDot');
+
+        if (modeText && modeIcon) {
+          if (this.currentMode === 'fill') {
+            modeText.textContent = I18N[App.lang].modeFill;
+            modeIcon.innerHTML = `<svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 4V2m0 16v-2m8-6h-2M9 12H7m11.3-6.7l-1.4 1.4M6.1 17.9l-1.4 1.4m0-11.3l1.4 1.4m11.3 11.3l1.4 1.4M2 22l10-10"/></svg>`;
+          } else {
+            modeText.textContent = I18N[App.lang].modeDraw;
+            modeIcon.innerHTML = `<svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18.375 2.625a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.375-9.375z"/></svg>`;
+          }
+        }
+
+        if (toolIcon) {
+          if (this.currentTool === 'brush') {
+            toolIcon.innerHTML = `<svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 114.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 4.54 1.15 6.04-.33 1.17-1.15 1.17-3.03 0-4.2l-1.04-.51z"/></svg>`;
+          } else {
+            toolIcon.innerHTML = `<svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 21L20 8l-5-5L2 16l5 5z"/><path d="M18 10l-4-4"/><line x1="2" y1="21" x2="22" y2="21"/></svg>`;
+          }
+        }
+
+        if (colorBubble) colorBubble.style.backgroundColor = this.currentColor;
+
+        if (sizeDot) {
+          sizeDot.style.width = this.brushSize === 10 ? '8px' : (this.brushSize === 22 ? '14px' : '20px');
+          sizeDot.style.height = this.brushSize === 10 ? '8px' : (this.brushSize === 22 ? '14px' : '20px');
+        }
+      },
+
+      setSize(size) {
+        this.brushSize = size;
+        document.getElementById('sizeBtnSm').className = size === 10 ? 'w-9 h-9 rounded-full bg-pink-100 border-2 border-pink-500 flex items-center justify-center scale-110' : 'w-9 h-9 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center';
+        document.getElementById('sizeBtnMd').className = size === 22 ? 'w-10 h-10 rounded-full bg-pink-100 border-2 border-pink-500 flex items-center justify-center scale-110' : 'w-10 h-10 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center';
+        document.getElementById('sizeBtnLg').className = size === 38 ? 'w-11 h-11 rounded-full bg-pink-100 border-2 border-pink-500 flex items-center justify-center scale-110' : 'w-11 h-11 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center';
+        this.updateMobileQuickBar();
+      },
+
+      hslToHex(h, s, l) {
+        l /= 100;
+        const a = s * Math.min(l, 1 - l) / 100;
+        const f = n => {
+          const k = (n + h / 30) % 12;
+          const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+          return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+      },
+
+      hexToHsl(hex) {
+        let r = parseInt(hex.slice(1, 3), 16) / 255;
+        let g = parseInt(hex.slice(3, 5), 16) / 255;
+        let b = parseInt(hex.slice(5, 7), 16) / 255;
+        let max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+          h = s = 0;
+        } else {
+          let d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+          }
+          h /= 6;
+        }
+        return {
+          h: Math.round(h * 360),
+          s: Math.round(s * 100),
+          l: Math.round(l * 100)
+        };
+      },
+
+      onSliderColorChange() {
+        const hueInput = document.getElementById('hueSlider');
+        const lightInput = document.getElementById('lightnessSlider');
+        this.currentHue = parseInt(hueInput.value, 10);
+        this.currentLightness = parseInt(lightInput.value, 10);
+        this.currentSaturation = 100;
+
+        const pureHueHex = this.hslToHex(this.currentHue, 100, 50);
+        document.documentElement.style.setProperty('--current-hue-color', pureHueHex);
+
+        const newHex = this.hslToHex(this.currentHue, this.currentSaturation, this.currentLightness);
+        this.setColor(newHex, null, true);
+      },
+
+      setTone(tone) {
+        const lightInput = document.getElementById('lightnessSlider');
+        if (tone === 'pastel') {
+          this.currentLightness = 75;
+          this.currentSaturation = 85;
+        } else if (tone === 'deep') {
+          this.currentLightness = 30;
+          this.currentSaturation = 90;
+        } else {
+          this.currentLightness = 50;
+          this.currentSaturation = 100;
+        }
+        lightInput.value = this.currentLightness;
+        this.onSliderColorChange();
+      },
+
+      syncSliderUI() {
+        const hueInput = document.getElementById('hueSlider');
+        const lightInput = document.getElementById('lightnessSlider');
+        if (hueInput && lightInput) {
+          hueInput.value = this.currentHue;
+          lightInput.value = this.currentLightness;
+          const pureHueHex = this.hslToHex(this.currentHue, 100, 50);
+          document.documentElement.style.setProperty('--current-hue-color', pureHueHex);
+        }
+      },
+
+      setColor(hex, el = null, fromSlider = false) {
+        this.currentColor = hex;
+        document.getElementById('currentColorBubble').style.backgroundColor = hex;
+        document.getElementById('currentColorHex').textContent = hex;
+
+        document.querySelectorAll('.swatch-item').forEach(s => s.classList.remove('ring-3', 'ring-pink-500'));
+        if (el) el.classList.add('ring-3', 'ring-pink-500');
+
+        if (!fromSlider) {
+          const hsl = this.hexToHsl(hex);
+          this.currentHue = hsl.h;
+          this.currentLightness = hsl.l;
+          this.currentSaturation = hsl.s || 100;
+          this.syncSliderUI();
+        }
+
+        this.updateMobileQuickBar();
+        if (this.currentTool === 'eraser') this.setTool('brush');
+        if (this.panModeActive) this.togglePanMode(false);
+      },
+
+      zoomIn() {
+        this.setZoom(this.zoomLevel + 0.35);
+      },
+
+      zoomOut() {
+        this.setZoom(this.zoomLevel - 0.35);
+      },
+
+      setZoom(val) {
+        this.zoomLevel = Math.min(Math.max(val, 1.0), 4.5);
+        if (this.zoomLevel === 1.0) {
+          this.panX = 0;
+          this.panY = 0;
+          this.togglePanMode(false);
+        }
+        this.applyTransform();
+      },
+
+      resetZoom() {
+        this.zoomLevel = 1.0;
+        this.panX = 0;
+        this.panY = 0;
+        this.togglePanMode(false);
+        this.applyTransform();
+      },
+
+      togglePanMode(forceState = null) {
+        this.panModeActive = forceState !== null ? forceState : !this.panModeActive;
+        const btn = document.getElementById('hudPanToggleBtn');
+        const hint = document.getElementById('zoomHintBanner');
+
+        if (this.panModeActive) {
+          btn.classList.add('active');
+          this.canvas.style.cursor = 'grab';
+          document.getElementById('zoomHintText').textContent = I18N[App.lang].panModeActiveHint;
+          hint.classList.remove('opacity-0');
+        } else {
+          btn.classList.remove('active');
+          this.canvas.style.cursor = this.currentMode === 'fill' ? 'pointer' : 'crosshair';
+          hint.classList.add('opacity-0');
+        }
+      },
+
+      applyTransform() {
+        const viewport = document.getElementById('canvasViewport');
+        viewport.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoomLevel})`;
+        
+        const pct = `${Math.round(this.zoomLevel * 100)}%`;
+        document.getElementById('hudZoomText').textContent = pct;
+
+        if (this.zoomLevel > 1.2 && !this.panModeActive) {
+          const hint = document.getElementById('zoomHintBanner');
+          document.getElementById('zoomHintText').textContent = I18N[App.lang].panTip;
+          hint.classList.remove('opacity-0');
+          clearTimeout(this._hintTimeout);
+          this._hintTimeout = setTimeout(() => {
+            if (!this.panModeActive) hint.classList.add('opacity-0');
+          }, 3000);
+        }
+      },
+
+      generateThumbnail(srcCanvas, maxWidth = 280, maxHeight = 280, quality = 0.72) {
+        const tCanvas = document.createElement('canvas');
+        let w = srcCanvas.width;
+        let h = srcCanvas.height;
+        if (w > h) {
+          if (w > maxWidth) {
+            h = Math.round(h * (maxWidth / w));
+            w = maxWidth;
+          }
+        } else {
+          if (h > maxHeight) {
+            w = Math.round(w * (maxHeight / h));
+            h = maxHeight;
+          }
+        }
+        tCanvas.width = w;
+        tCanvas.height = h;
+        const tCtx = tCanvas.getContext('2d');
+        tCtx.fillStyle = '#FFFFFF';
+        tCtx.fillRect(0, 0, w, h);
+        tCtx.drawImage(srcCanvas, 0, 0, w, h);
+        return tCanvas.toDataURL('image/jpeg', quality);
+      },
+
+      saveArtwork() {
+        const title = this.currentDrawing ? (App.lang === 'ms' ? this.currentDrawing.titleBM : this.currentDrawing.titleEN) : 'Coloring-Time';
+        const dataUrl = this.canvas.toDataURL('image/png');
+
+        // 1. Save compact thumbnail to in-app LocalStorage without hitting quota
+        try {
+          const thumbData = this.generateThumbnail(this.canvas, 280, 280, 0.75);
+          const savedList = JSON.parse(localStorage.getItem('coloring_time_artworks') || '[]');
+          const newEntry = {
+            id: 'art-' + Date.now(),
+            title: title,
+            date: new Date().toLocaleDateString(App.lang === 'ms' ? 'ms-MY' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+            thumb: thumbData,
+            originalDrawingId: this.currentDrawing ? this.currentDrawing.id : null,
+            outlineUrl: this.currentDrawing ? this.currentDrawing.outlineUrl : ''
+          };
+          savedList.unshift(newEntry);
+          if (savedList.length > 25) savedList.pop(); // keep last 25
+
+          try {
+            localStorage.setItem('coloring_time_artworks', JSON.stringify(savedList));
+          } catch (quotaErr) {
+            // Trim old items if local storage is constrained
+            savedList.splice(10);
+            localStorage.setItem('coloring_time_artworks', JSON.stringify(savedList));
+          }
+        } catch (e) {
+          console.warn('LocalStorage save error:', e);
+        }
+
+        // 2. Set preview in modal for long-press / sharing without navigating the page
+        const modalPreview = document.getElementById('savedModalPreviewImg');
+        if (modalPreview) modalPreview.src = dataUrl;
+
+        // Open save confirmation modal
+        document.getElementById('saveSuccessModal').classList.remove('hidden');
+        App.showToast(I18N[App.lang].savedToast);
+      },
+
+      shareSavedImage() {
+        const title = this.currentDrawing ? (App.lang === 'ms' ? this.currentDrawing.titleBM : this.currentDrawing.titleEN) : 'Coloring-Time';
+        const filename = `${title.replace(/\s+/g, '-')}.png`;
+
+        this.canvas.toBlob(async (blob) => {
+          if (!blob) return;
+
+          if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
+            try {
+              const file = new File([blob], filename, { type: 'image/png' });
+              await navigator.share({
+                files: [file],
+                title: title,
+                text: `${title} — Coloring Time`
+              });
+              App.showToast(I18N[App.lang].savedToast);
+              return;
+            } catch (err) {
+              if (err.name !== 'AbortError') console.warn('Share notice:', err);
+            }
+          }
+
+          // If on desktop browser that supports download without page reload
+          if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = blobUrl;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+            App.showToast(I18N[App.lang].savedToast);
+          } else {
+            // On mobile iOS, tell user to long-press directly on the preview image
+            App.showToast(I18N[App.lang].saveTipLongPress);
+          }
+        }, 'image/png');
+      },
+
+      closeSaveModal() {
+        document.getElementById('saveSuccessModal').classList.add('hidden');
+      },
+
+      printArtwork() {
+        document.getElementById('printModal').classList.remove('hidden');
+      },
+
+      closePrintModal() {
+        document.getElementById('printModal').classList.add('hidden');
+      },
+
+      openPrintSheet(coloured) {
+        this.closePrintModal();
+        this.printSheetIsColoured = !!coloured;
+
+        const imgData = coloured ? this.canvas.toDataURL('image/png') : this.outlineCanvas.toDataURL('image/png');
+        const title = this.currentDrawing ? (App.lang === 'ms' ? this.currentDrawing.titleBM : this.currentDrawing.titleEN) : 'Coloring Time';
+
+        // Update Print Sheet Modal Preview
+        const sheetImg = document.getElementById('printSheetImg');
+        const sheetTitle = document.getElementById('sheetPreviewHeading');
+        if (sheetImg) sheetImg.src = imgData;
+        if (sheetTitle) sheetTitle.textContent = `${title} — Coloring Time`;
+
+        // Update hidden native print container
+        const printTitle = document.getElementById('printAreaTitle');
+        const printImg = document.getElementById('printAreaImage');
+        if (printTitle) printTitle.textContent = title;
+        if (printImg) printImg.src = imgData;
+
+        // Open full-screen print sheet modal
+        document.getElementById('printSheetModal').classList.remove('hidden');
+      },
+
+      async generatePdfBlob(title, isColoured) {
+        const sourceCanvas = isColoured ? this.canvas : this.outlineCanvas;
+
+        // Render to high-res white background canvas
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = 1200;
+        exportCanvas.height = 1200;
+        const eCtx = exportCanvas.getContext('2d');
+        eCtx.fillStyle = '#FFFFFF';
+        eCtx.fillRect(0, 0, 1200, 1200);
+        eCtx.drawImage(sourceCanvas, 0, 0, 1200, 1200);
+        const jpegDataUrl = exportCanvas.toDataURL('image/jpeg', 0.95);
+
+        // Check if jsPDF library is loaded
+        if (window.jspdf && window.jspdf.jsPDF) {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          // A4 page dimensions: 210mm x 297mm
+          doc.setFillColor(255, 255, 255);
+          doc.rect(0, 0, 210, 297, 'F');
+
+          // Header Title
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(22);
+          doc.setTextColor(30, 41, 59);
+          doc.text(title, 105, 28, { align: 'center' });
+
+          // Subtitle
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10);
+          doc.setTextColor(140, 150, 160);
+          doc.text('Coloring Time — Preschool Art Studio', 105, 36, { align: 'center' });
+
+          // Image frame (170mm x 170mm centered)
+          doc.addImage(jpegDataUrl, 'JPEG', 20, 46, 170, 170, undefined, 'FAST');
+
+          // Frame border
+          doc.setDrawColor(220, 226, 230);
+          doc.setLineWidth(0.6);
+          doc.roundedRect(18, 44, 174, 174, 4, 4, 'D');
+
+          // Footer branding
+          doc.setFontSize(9);
+          doc.setTextColor(150, 160, 170);
+          doc.text('Kinder Klub | All Rights Reserved', 105, 282, { align: 'center' });
+
+          return doc.output('blob');
+        }
+
+        // Native fallback minimal A4 PDF generator
+        return this.createVanillaA4PdfBlob(title, jpegDataUrl);
+      },
+
+      createVanillaA4PdfBlob(title, jpegDataUrl) {
+        const base64Data = jpegDataUrl.split(',')[1];
+        const binary = atob(base64Data);
+        const imgLen = binary.length;
+        const imgBytes = new Uint8Array(imgLen);
+        for (let i = 0; i < imgLen; i++) imgBytes[i] = binary.charCodeAt(i);
+
+        const safeTitle = (title || 'Coloring Time').replace(/[\\()]/g, '');
+        const contentStr = `BT\n/F1 22 Tf\n1 0 0 1 50 780 Tm\n(${safeTitle}) Tj\nET\n` +
+                           `BT\n/F1 10 Tf\n1 0 0 1 50 760 Tm\n(Coloring Time - Preschool Art Studio) Tj\nET\n` +
+                           `q\n470 0 0 470 62 250 cm\n/Im1 Do\nQ\n` +
+                           `BT\n/F1 9 Tf\n1 0 0 1 50 40 Tm\n(Kinder Klub | All Rights Reserved) Tj\nET\n`;
+
+        const head = `%PDF-1.4\n`;
+        const o1 = `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`;
+        const o2 = `2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`;
+        const o3 = `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /ProcSet [/PDF /ImageC /Text] /XObject << /Im1 4 0 R >> /Font << /F1 6 0 R >> >> /Contents 5 0 R >>\nendobj\n`;
+        const o4Head = `4 0 obj\n<< /Type /XObject /Subtype /Image /Width 1200 /Height 1200 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgLen} >>\nstream\n`;
+        const o4Foot = `\nendstream\nendobj\n`;
+        const o5 = `5 0 obj\n<< /Length ${contentStr.length} >>\nstream\n${contentStr}endstream\nendobj\n`;
+        const o6 = `6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n`;
+
+        const enc = new TextEncoder();
+        const pHead = enc.encode(head);
+        const p1 = enc.encode(o1);
+        const p2 = enc.encode(o2);
+        const p3 = enc.encode(o3);
+        const p4Head = enc.encode(o4Head);
+        const p4Foot = enc.encode(o4Foot);
+        const p5 = enc.encode(o5);
+        const p6 = enc.encode(o6);
+
+        const x1 = pHead.length;
+        const x2 = x1 + p1.length;
+        const x3 = x2 + p2.length;
+        const x4 = x3 + p3.length;
+        const x5 = x4 + p4Head.length + imgLen + p4Foot.length;
+        const x6 = x5 + p5.length;
+        const startXref = x6 + p6.length;
+
+        const pad = (n) => String(n).padStart(10, '0');
+        const xref = `xref\n0 7\n0000000000 65535 f \n` +
+                     `${pad(x1)} 00000 n \n${pad(x2)} 00000 n \n${pad(x3)} 00000 n \n` +
+                     `${pad(x4)} 00000 n \n${pad(x5)} 00000 n \n${pad(x6)} 00000 n \n` +
+                     `trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${startXref}\n%%EOF`;
+        const pXref = enc.encode(xref);
+
+        return new Blob([pHead, p1, p2, p3, p4Head, imgBytes, p4Foot, p5, p6, pXref], { type: 'application/pdf' });
+      },
+
+      async downloadOrSharePDF() {
+        const title = this.currentDrawing ? (App.lang === 'ms' ? this.currentDrawing.titleBM : this.currentDrawing.titleEN) : 'Coloring-Time';
+        const filename = `${title.replace(/\s+/g, '-')}.pdf`;
+        const btn = document.getElementById('btnExportPDF');
+        if (btn) btn.style.opacity = '0.6';
+
+        try {
+          const pdfBlob = await this.generatePdfBlob(title, this.printSheetIsColoured);
+          const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+          // Try native device share sheet (iOS/Android will show actual PDF Document)
+          if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            try {
+              await navigator.share({
+                files: [pdfFile],
+                title: `${title} - Coloring Time`,
+                text: `Helaian Mewarna PDF: ${title}`
+              });
+              if (btn) btn.style.opacity = '1';
+              return;
+            } catch (err) {
+              if (err.name === 'AbortError') {
+                if (btn) btn.style.opacity = '1';
+                return;
+              }
+            }
+          }
+
+          // Desktop/Direct PDF download
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          const link = document.createElement('a');
+          link.download = filename;
+          link.href = blobUrl;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2500);
+          App.showToast("Fail PDF berjaya dijana!");
+        } catch (e) {
+          console.warn('PDF generation error:', e);
+          App.showToast("Ralat menjana PDF.");
+        } finally {
+          if (btn) btn.style.opacity = '1';
+        }
+      },
+
+      closePrintSheet() {
+        document.getElementById('printSheetModal').classList.add('hidden');
+      },
+
+      generateOutlineSVG(drawingId, w, h) {
+        return `
+          <rect width="${w}" height="${h}" fill="#FFFFFF"/>
+          <g transform="scale(${w / 500})" stroke="#111111" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="#FFFFFF">
+            <path d="M 30 430 Q 250 400 470 430"/>
+            <path d="M 120 380 C 100 280, 160 220, 250 220 C 340 220, 400 280, 380 380 C 370 430, 130 430, 120 380 Z"/>
+            <circle cx="250" cy="180" r="100"/>
+            <circle cx="210" cy="170" r="14" fill="#111111"/>
+            <circle cx="290" cy="170" r="14" fill="#111111"/>
+            <circle cx="214" cy="166" r="4" fill="#FFFFFF" stroke="none"/>
+            <circle cx="294" cy="166" r="4" fill="#FFFFFF" stroke="none"/>
+            <ellipse cx="250" cy="195" rx="14" ry="10" fill="#111111"/>
+            <path d="M 235 210 Q 250 225 265 210"/>
+            <path d="M 200 280 Q 250 350 300 280 Q 250 260 200 280 Z" stroke-width="8"/>
+          </g>
+        `;
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      App.init();
+      Studio.init();
+    });
+  </script>
+</body>
+</html>
